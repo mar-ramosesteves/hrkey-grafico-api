@@ -1,10 +1,10 @@
 from flask import Flask, request, send_file, jsonify
-from flask_cors import CORS  # ← FALTAVA ISSO
+from flask_cors import CORS
 import io
 import matplotlib.pyplot as plt
 
 app = Flask(__name__)
-CORS(app, resources={r"/grafico": {"origins": "*"}})  # ← OU substitua o "*" por "https://gestor.thehrkey.tech" se quiser restringir
+CORS(app)  # ← Permite qualquer origem (pode depois restringir para segurança)
 
 @app.route('/grafico', methods=['POST'])
 def gerar_grafico():
@@ -12,6 +12,7 @@ def gerar_grafico():
         dados = request.get_json()
         print("🔍 Dados recebidos:", dados)
 
+        # Dados de exemplo — substitua depois pela lógica real
         auto = 75
         equipe = 65
         if dados['emailLider'] == 'marceloesteves@thehrkey.tech':
