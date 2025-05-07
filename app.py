@@ -41,3 +41,4 @@ def gerar_grafico():
         print("❌ Erro ao gerar gráfico:", str(e))
         return f"Erro ao gerar gráfico: {str(e)}", 500
 
+
