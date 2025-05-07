@@ -1,6 +1,8 @@
 from flask import Flask, request, send_file, jsonify
 import io
 import matplotlib.pyplot as plt
+from flask_cors import CORS
+
 
 app = Flask(__name__)
 CORS(app, origins=["https://gestor.thehrkey.tech"])
