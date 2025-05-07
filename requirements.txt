@@ -3,3 +3,4 @@ uvicorn
 matplotlib
 gunicorn
 flask
+flask_cors
