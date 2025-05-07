@@ -1,4 +1,6 @@
 from flask import Flask, request, send_file
+from flask_cors import CORS
+
 import matplotlib.pyplot as plt
 import io
 
