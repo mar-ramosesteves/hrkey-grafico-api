@@ -6,21 +6,31 @@ app = Flask(__name__)
 
 @app.route('/grafico', methods=['POST'])
 def gerar_grafico():
-    dados = request.json
-    # Aqui você processará os dados recebidos e criará o gráfico
-    # Este é um exemplo simples de gráfico de barras
-    arquetipos = dados['arquetipos']
-    valores = dados['valores']
+    try:
+        dados = request.json
 
-    plt.figure(figsize=(10, 6))
-    plt.bar(arquetipos, valores, color='skyblue')
-    plt.xlabel('Arquétipos')
-    plt.ylabel('Pontuação')
-    plt.title('Gráfico de Arquétipos')
-    plt.tight_layout()
+        print("📥 Dados recebidos:", dados)
 
-    img = io.BytesIO()
-    plt.savefig(img, format='png')
-    img.seek(0)
-    plt.close()
-    return send_file(img, mimetype='image/png')
+        arquetipos = dados['arquetipos']
+        valores = dados['valores']
+
+        print("✅ Arquetipos:", arquetipos)
+        print("✅ Valores:", valores)
+
+        plt.figure(figsize=(10, 6))
+        plt.bar(arquetipos, valores, color='skyblue')
+        plt.xlabel('Arquétipos')
+        plt.ylabel('Pontuação')
+        plt.title('Gráfico de Arquétipos')
+        plt.tight_layout()
+
+        img = io.BytesIO()
+        plt.savefig(img, format='png')
+        img.seek(0)
+        plt.close()
+
+        return send_file(img, mimetype='image/png')
+
+    except Exception as e:
+        print("❌ Erro ao gerar gráfico:", str(e))
+        return f"Erro ao gerar gráfico: {str(e)}", 500
