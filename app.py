@@ -1,22 +1,24 @@
-from flask import Flask, request, send_file
-from flask_cors import CORS
-
-import matplotlib.pyplot as plt
-import io
-
-app = Flask(__name__)
-CORS(app, resources={r"/grafico": {"origins": "https://gestor.thehrkey.tech"}})
-
-
 @app.route('/grafico', methods=['POST'])
 def gerar_grafico():
     try:
         dados = request.json
-
         print("📥 Dados recebidos:", dados)
 
-        arquetipos = dados['arquetipos']
-        valores = dados['valores']
+        if dados.get('tipo') == 'demo':
+            # Simulação estática
+            arquetipos = ['Estratégico', 'Inspirador', 'Analítico', 'Executor']
+            valores = [85, 70, 60, 90]
+        elif dados.get('tipo') == 'real':
+            email = dados.get('emailLider')
+            periodo = dados.get('periodo')
+
+            print("🔎 Procurando dados reais para:", email, "no período", periodo)
+
+            # Aqui entra o código real de consulta (exemplo abaixo simula)
+            arquetipos = ['Estratégico', 'Inspirador', 'Analítico', 'Executor']
+            valores = [88, 72, 63, 91]  # ← Substitua por consulta real no futuro
+        else:
+            return "Tipo de gráfico inválido", 400
 
         print("✅ Arquetipos:", arquetipos)
         print("✅ Valores:", valores)
@@ -38,3 +40,4 @@ def gerar_grafico():
     except Exception as e:
         print("❌ Erro ao gerar gráfico:", str(e))
         return f"Erro ao gerar gráfico: {str(e)}", 500
+
