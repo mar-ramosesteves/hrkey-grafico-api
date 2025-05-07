@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import io
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/grafico": {"origins": "https://gestor.thehrkey.tech"}})
+
 
 @app.route('/grafico', methods=['POST'])
 def gerar_grafico():
