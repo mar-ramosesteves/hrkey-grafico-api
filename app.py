@@ -3,6 +3,8 @@ import io
 import matplotlib.pyplot as plt
 
 app = Flask(__name__)
+CORS(app, origins=["https://gestor.thehrkey.tech"])
+
 
 @app.route('/grafico', methods=['POST'])
 def gerar_grafico():
