@@ -22,9 +22,8 @@ def gerar_grafico():
         fig, ax = plt.subplots()
         ax.bar(['Autoavaliação', 'Equipe'], [auto, equipe], color=['#4e79a7', '#f28e2c'])
         ax.set_ylim(0, 100)
-        ax.set_title(f"Avaliação de {dados['periodo']}", fontsize=14)
+        ax.set_title(f"Avaliação de {dados['dataEnvio']}", fontsize=14)
         ax.set_ylabel('Pontuação (%)')
-
         buffer = io.BytesIO()
         plt.tight_layout()
         plt.savefig(buffer, format='png')
