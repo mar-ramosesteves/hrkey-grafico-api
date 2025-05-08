@@ -4,3 +4,4 @@ matplotlib
 gunicorn
 flask
 flask_cors
+pandas
