@@ -1,79 +1,63 @@
 from flask import Flask, request, send_file, jsonify
 from flask_cors import CORS
-import io
-import matplotlib.pyplot as plt
 import pandas as pd
+import matplotlib.pyplot as plt
+import io
 
 app = Flask(__name__)
 CORS(app)
+
+# Carrega a matriz com CHAVE pronta
+matriz = pd.read_csv('tabela_arquétipos_com_chave.csv')
 
 @app.route('/grafico', methods=['POST'])
 def gerar_grafico():
     try:
         dados = request.get_json()
         email_lider = dados['emailLider']
-        data_envio = dados['dataEnvio']  # formato 'YYYY-MM-DD'
+        data_envio = dados['dataEnvio']
 
-        print("🔍 Dados recebidos:", dados)
+        # CSVs exportados do WordPress (MetForm)
+        df_auto = pd.read_csv('form_Arquetipos_auto_aval-export-1746712137.csv')
+        df_equipe = pd.read_csv('form_Arquetipos_Equipe-export-1746712147.csv')
 
-        # 📄 Arquivos base
-        arq_auto = 'form_Arquetipos_auto_aval-export-1746712137.csv'
-        arq_equipe = 'form_Arquetipos_Equipe-export-1746712147.csv'
-        escalas = 'ESCALAS_ARQUETIPOS.xlsx'
-        maximos = 'Pontuacao_Max_por_Afirmacao_Arquetipos.xlsx'
-
-        # 📌 Leitura dos arquivos
-        df_auto = pd.read_csv(arq_auto)
-        df_eq = pd.read_csv(arq_equipe)
-        pesos = pd.read_excel(escalas, sheet_name='pesos')
-        mapa = pd.read_excel(escalas, sheet_name='mapa')
-        max_df = pd.read_excel(maximos)
-
-        # 🧼 Filtra os dados para o líder e data
-        auto = df_auto[(df_auto['emailLider'] == email_lider) & (df_auto['dataEnvio'] == data_envio)]
-        equipe = df_eq[(df_eq['emailLider'] == email_lider) & (df_eq['dataEnvio'] == data_envio)]
+        # Filtrar por e-mail do líder e data
+        auto = df_auto[(df_auto['emailLider'] == email_lider) & (df_auto['data'] == data_envio)]
+        equipe = df_equipe[(df_equipe['emailLider'] == email_lider) & (df_equipe['data'] == data_envio)]
 
         if auto.empty or equipe.empty:
-            raise Exception("❌ Autoavaliação ou avaliações da equipe não encontradas.")
+            raise Exception("❌ Não foram encontradas respostas para essa data ou esse líder.")
 
-        # 🔄 Converte Q1 a Q36 para float
-        perguntas = [f"Q{i}" for i in range(1, 37)]
-        auto[perguntas] = auto[perguntas].astype(float)
-        equipe[perguntas] = equipe[perguntas].astype(float)
+        perguntas = [f"Q{str(i).zfill(2)}" for i in range(1, 37)]
 
-        def calcular(respostas, tipo):
+        def gerar_chaves(df, tipo):
             linhas = []
-            for q in perguntas:
-                nota = respostas[q].values[0] if tipo == 'auto' else respostas[q]
-                nota = nota.astype(float)
+            for _, linha in df.iterrows():
+                for cod in perguntas:
+                    nota = int(linha[cod])
+                    for arq in matriz['ARQUETIPO'].unique():
+                        chave = f"{arq}{nota}{cod}"
+                        match = matriz[matriz['CHAVE'] == chave]
+                        if not match.empty:
+                            pontos = match.iloc[0]['PONTOS_OBTIDOS']
+                            maximo = match.iloc[0]['PONTOS_MAXIMOS']
+                            linhas.append((arq, pontos, maximo))
+            return pd.DataFrame(linhas, columns=['ARQUETIPO', 'PONTOS_OBTIDOS', 'PONTOS_MAXIMOS'])
 
-                for idx in range(len(nota)):
-                    estrelas = int(nota.iloc[idx])
-                    if estrelas >= 4:
-                        peso = pesos.loc[pesos['Escala'] == 'Esquerda', str(estrelas)].values[0]
-                    else:
-                        peso = pesos.loc[pesos['Escala'] == 'Direita', str(estrelas)].values[0]
+        df_auto_result = gerar_chaves(auto, 'auto')
+        df_eq_result = gerar_chaves(equipe, 'equipe')
 
-                    estilo = mapa.loc[mapa['Pergunta'] == q, 'Estilo'].values[0]
-                    peso_arq = mapa.loc[mapa['Pergunta'] == q, 'Peso'].values[0]
-                    max_arq = max_df.loc[(max_df['Pergunta'] == q) & (max_df['Estilo'] == estilo), 'Máximo'].values[0]
+        auto_grouped = df_auto_result.groupby('ARQUETIPO').sum()
+        equipe_grouped = df_eq_result.groupby('ARQUETIPO').sum()
 
-                    pontos = peso * peso_arq
-                    percentual = (pontos / max_arq) * 100
-                    linhas.append((estilo, percentual))
+        auto_grouped['PERCENTUAL'] = (auto_grouped['PONTOS_OBTIDOS'] / auto_grouped['PONTOS_MAXIMOS']) * 100
+        equipe_grouped['PERCENTUAL'] = (equipe_grouped['PONTOS_OBTIDOS'] / equipe_grouped['PONTOS_MAXIMOS']) * 100
 
-            df_resultado = pd.DataFrame(linhas, columns=['Estilo', 'Percentual'])
-            return df_resultado.groupby('Estilo').mean()
+        estilos = matriz['ARQUETIPO'].unique().tolist()
+        auto_vals = auto_grouped.reindex(estilos)['PERCENTUAL'].fillna(0)
+        equipe_vals = equipe_grouped.reindex(estilos)['PERCENTUAL'].fillna(0)
 
-        # 📊 Cálculo final
-        resultado_auto = calcular(auto, 'auto')
-        resultado_equipe = calcular(equipe, 'equipe')
-
-        estilos = ['Imperativo', 'Resoluto', 'Cuidativo', 'Consultivo', 'Prescritivo', 'Formador']
-        auto_vals = resultado_auto.reindex(estilos)['Percentual'].fillna(0)
-        equipe_vals = resultado_equipe.reindex(estilos)['Percentual'].fillna(0)
-
-        # 📈 Gráfico
+        # Gráfico
         fig, ax = plt.subplots(figsize=(10, 6))
         x = range(len(estilos))
         ax.bar([i - 0.2 for i in x], auto_vals, width=0.4, label='Autoavaliação')
@@ -84,7 +68,7 @@ def gerar_grafico():
 
         ax.set_xticks(x)
         ax.set_xticklabels(estilos)
-        ax.set_ylim(0, 100)
+        ax.set_ylim(0, 120)
         ax.set_ylabel('Pontuação (%)')
         ax.set_title(f"ARQUÉTIPOS DE GESTÃO\nLíder: {email_lider} | Data: {data_envio}\n{len(equipe)} avaliações da equipe", fontsize=12)
         ax.legend()
@@ -98,6 +82,9 @@ def gerar_grafico():
         return send_file(buffer, mimetype='image/png')
 
     except Exception as e:
-        print("❌ Erro ao gerar gráfico:", str(e))
+        print("❌ Erro:", str(e))
         return jsonify({'erro': str(e)}), 500
 
+@app.route('/')
+def home():
+    return "API de Arquétipos VIVA no Render! 💥"
