@@ -21,7 +21,7 @@ def gerar_grafico():
 
         if not dados:
             raise Exception("Nenhum dado recebido.")
-
+        print("📦 Dados recebidos:", dados)
         email = dados.get('emailLider')
         data = dados.get('data')
 
