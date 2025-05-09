@@ -13,7 +13,11 @@ matriz = pd.read_excel('TABELA_GERAL_ARQUETIPOS_COM_CHAVE.xlsx')
 @app.route('/grafico', methods=['POST'])
 def gerar_grafico():
     try:
-        dados = request.get_json()
+        if request.is_json:
+            dados = request.get_json()
+        else:
+            dados = request.form.to_dict()
+
 
         if not dados:
             raise Exception("Nenhum dado recebido.")
