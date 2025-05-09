@@ -7,79 +7,71 @@ import io
 app = Flask(__name__)
 CORS(app)
 
-# Carrega a matriz com CHAVE pronta
-matriz = pd.read_csv('tabela_arquétipos_com_chave.csv')
+# Carrega a matriz de cálculo com a coluna CHAVE
+matriz = pd.read_excel('TABELA_GERAL_ARQUETIPOS_COM_CHAVE.xlsx')
 
 @app.route('/grafico', methods=['POST'])
 def gerar_grafico():
     try:
         dados = request.get_json()
-        email_lider = dados['emailLider']
-        data_envio = dados['dataEnvio']
 
-        # CSVs exportados do WordPress (MetForm)
-        df_auto = pd.read_csv('form_Arquetipos_auto_aval-export-1746712137.csv')
-        df_equipe = pd.read_csv('form_Arquetipos_Equipe-export-1746712147.csv')
+        if not dados:
+            raise Exception("Nenhum dado recebido.")
 
-        # Filtrar por e-mail do líder e data
-        auto = df_auto[(df_auto['emailLider'] == email_lider) & (df_auto['data'] == data_envio)]
-        equipe = df_equipe[(df_equipe['emailLider'] == email_lider) & (df_equipe['data'] == data_envio)]
+        email = dados.get('emailLider')
+        data = dados.get('data')
 
-        if auto.empty or equipe.empty:
-            raise Exception("❌ Não foram encontradas respostas para essa data ou esse líder.")
+        if not email or not data:
+            raise Exception("Campos 'emailLider' e 'data' são obrigatórios.")
 
-        perguntas = [f"Q{str(i).zfill(2)}" for i in range(1, 37)]
+        perguntas = [f"Q{str(i).zfill(2)}" for i in range(1, 50)]  # Q01 a Q49
+        arquetipos = ["Imperativo", "Consultivo", "Cuidativo", "Resoluto", "Prescritivo", "Formador"]
 
-        def gerar_chaves(df, tipo):
-            linhas = []
-            for _, linha in df.iterrows():
-                for cod in perguntas:
-                    nota = int(linha[cod])
-                    for arq in matriz['ARQUETIPO'].unique():
-                        chave = f"{arq}{nota}{cod}"
-                        match = matriz[matriz['CHAVE'] == chave]
-                        if not match.empty:
-                            pontos = match.iloc[0]['PONTOS_OBTIDOS']
-                            maximo = match.iloc[0]['PONTOS_MAXIMOS']
-                            linhas.append((arq, pontos, maximo))
-            return pd.DataFrame(linhas, columns=['ARQUETIPO', 'PONTOS_OBTIDOS', 'PONTOS_MAXIMOS'])
+        linhas = []
 
-        df_auto_result = gerar_chaves(auto, 'auto')
-        df_eq_result = gerar_chaves(equipe, 'equipe')
+        for cod in perguntas:
+            nota = dados.get(cod)
+            if nota is None:
+                continue
+            try:
+                nota = int(nota)
+                if nota < 1 or nota > 6:
+                    continue
+            except:
+                continue
 
-        auto_grouped = df_auto_result.groupby('ARQUETIPO').sum()
-        equipe_grouped = df_eq_result.groupby('ARQUETIPO').sum()
+            for arq in arquetipos:
+                chave = f"{arq}{nota}{cod}"
+                match = matriz[matriz['CHAVE'] == chave]
+                if not match.empty:
+                    pontos = match.iloc[0]['PONTOS_OBTIDOS']
+                    maximo = match.iloc[0]['PONTOS_MAXIMOS']
+                    linhas.append((arq, pontos, maximo))
 
-        auto_grouped['PERCENTUAL'] = (auto_grouped['PONTOS_OBTIDOS'] / auto_grouped['PONTOS_MAXIMOS']) * 100
-        equipe_grouped['PERCENTUAL'] = (equipe_grouped['PONTOS_OBTIDOS'] / equipe_grouped['PONTOS_MAXIMOS']) * 100
+        if not linhas:
+            raise Exception("Nenhuma resposta válida encontrada para gerar o gráfico.")
 
-        estilos = matriz['ARQUETIPO'].unique().tolist()
-        auto_vals = auto_grouped.reindex(estilos)['PERCENTUAL'].fillna(0)
-        equipe_vals = equipe_grouped.reindex(estilos)['PERCENTUAL'].fillna(0)
+        df_result = pd.DataFrame(linhas, columns=['ARQUETIPO', 'PONTOS_OBTIDOS', 'PONTOS_MAXIMOS'])
+        resumo = df_result.groupby('ARQUETIPO').sum()
+        resumo['PERCENTUAL'] = (resumo['PONTOS_OBTIDOS'] / resumo['PONTOS_MAXIMOS']) * 100
 
-        # Gráfico
+        # Gera gráfico
         fig, ax = plt.subplots(figsize=(10, 6))
-        x = range(len(estilos))
-        ax.bar([i - 0.2 for i in x], auto_vals, width=0.4, label='Autoavaliação')
-        ax.bar([i + 0.2 for i in x], equipe_vals, width=0.4, label='Equipe')
-
-        ax.axhline(50, color='gray', linestyle='--', linewidth=1)
-        ax.axhline(60, color='red', linestyle='--', linewidth=1)
-
-        ax.set_xticks(x)
-        ax.set_xticklabels(estilos)
+        resumo = resumo.sort_index()
+        ax.bar(resumo.index, resumo['PERCENTUAL'])
         ax.set_ylim(0, 120)
-        ax.set_ylabel('Pontuação (%)')
-        ax.set_title(f"ARQUÉTIPOS DE GESTÃO\nLíder: {email_lider} | Data: {data_envio}\n{len(equipe)} avaliações da equipe", fontsize=12)
-        ax.legend()
+        ax.set_title(f"Avaliação de Arquétipos\n{email} - {data}")
+        ax.set_ylabel("Pontuação (%)")
+        plt.xticks(rotation=45)
+        plt.grid(axis='y')
 
-        buffer = io.BytesIO()
+        buf = io.BytesIO()
         plt.tight_layout()
-        plt.savefig(buffer, format='png')
-        buffer.seek(0)
+        plt.savefig(buf, format='png')
+        buf.seek(0)
         plt.close()
 
-        return send_file(buffer, mimetype='image/png')
+        return send_file(buf, mimetype='image/png')
 
     except Exception as e:
         print("❌ Erro:", str(e))
@@ -87,4 +79,4 @@ def gerar_grafico():
 
 @app.route('/')
 def home():
-    return "API de Arquétipos VIVA no Render! 💥"
+    return "🎯 API de Gráficos de Arquétipos está ativa!"
