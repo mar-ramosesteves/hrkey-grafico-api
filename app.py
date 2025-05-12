@@ -107,7 +107,7 @@ def relatorio_detalhado():
             raise Exception("Nenhum dado recebido.")
 
         # Carrega matriz com tendência (%)
-        matriz = pd.read_excel("TABELAGERALARQUETIPOSOMFAVOR.xlsx")
+        matriz = pd.read_excel("TABELA_GERAL_ARQUETIPOS_COM_CHAVE.xlsx")
 
         perguntas = [f"Q{str(i).zfill(2)}" for i in range(1, 50)]
         arquetipos = ["Imperativo", "Consultivo", "Cuidativo", "Resoluto", "Prescritivo", "Formador"]
