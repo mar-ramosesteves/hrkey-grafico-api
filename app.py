@@ -59,7 +59,7 @@ def gerar_grafico():
         df_result = pd.DataFrame(linhas, columns=["ARQUETIPO", "PONTOS_OBTIDOS", "PONTOS_MAXIMOS"])
         resumo = df_result.groupby("ARQUETIPO").sum()
         resumo["PERCENTUAL"] = (resumo["PONTOS_OBTIDOS"] / resumo["PONTOS_MAXIMOS"]) * 100
-        resumo["PERCENTUAL"] = resumo["PERCENTUAL"].round(1)
+        resumo["PERCENTUAL"] = resumo["PERCENTUAL"].round(4)
 
         resumo = resumo.reindex(arquetipos)
 
