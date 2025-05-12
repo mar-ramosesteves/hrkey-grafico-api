@@ -6,7 +6,8 @@ import io
 import json
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": ["https://gestor.thehrkey.tech"]}})
+
 
 # Carrega a matriz de cálculo com a coluna CHAVE
 matriz = pd.read_excel("TABELA_GERAL_ARQUETIPOS_COM_CHAVE.xlsx")
@@ -95,3 +96,55 @@ def gerar_grafico():
 @app.route("/")
 def home():
     return "🎯 API de Gráficos de Arquétipos está ativa!"
+
+
+
+@app.route("/relatorio", methods=["POST"])
+def relatorio_detalhado():
+    try:
+        dados = request.get_json()
+        if not dados:
+            raise Exception("Nenhum dado recebido.")
+
+        # Carrega matriz com tendência (%)
+        matriz = pd.read_excel("TABELAGERALARQUETIPOSOMFAVOR.xlsx")
+
+        perguntas = [f"Q{str(i).zfill(2)}" for i in range(1, 50)]
+        arquetipos = ["Imperativo", "Consultivo", "Cuidativo", "Resoluto", "Prescritivo", "Formador"]
+        linhas = []
+
+        for cod in perguntas:
+            nota = int(dados.get(cod, 0))
+            if nota < 1 or nota > 6:
+                continue
+
+            linha_q = matriz[matriz["COD_AFIRMACAO"] == cod]
+            chaves = [
+                f"{arq}{nota}{cod}" for arq in arquetipos
+            ]
+            matches = matriz[matriz["CHAVE"].isin(chaves)]
+            if matches.empty:
+                continue
+
+            # Seleciona os dois arquétipos com maior % tendência
+            top2 = matches.sort_values(by="% Tendência", ascending=False).head(2)
+            arqs = top2["ARQUETIPO"].tolist()
+            tendencia = top2["Tendência"].values[0]
+            percentual = top2["% Tendência"].values[0]
+
+            frase = linha_q["AFIRMACAO"].values[0] if not linha_q.empty else cod
+
+            linhas.append({
+                "codigo": cod,
+                "frase": frase,
+                "percentual": round(percentual, 1),
+                "tendencia": tendencia,
+                "arquetipos": arqs
+            })
+
+        return jsonify({"resultado": linhas})
+
+    except Exception as e:
+        print("❌ Erro no /relatorio:", str(e))
+        return jsonify({"erro": str(e)}), 500
+
