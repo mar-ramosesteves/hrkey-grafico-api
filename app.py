@@ -59,6 +59,8 @@ def gerar_grafico():
         df_result = pd.DataFrame(linhas, columns=["ARQUETIPO", "PONTOS_OBTIDOS", "PONTOS_MAXIMOS"])
         resumo = df_result.groupby("ARQUETIPO").sum()
         resumo["PERCENTUAL"] = (resumo["PONTOS_OBTIDOS"] / resumo["PONTOS_MAXIMOS"]) * 100
+        resumo["PERCENTUAL"] = resumo["PERCENTUAL"].round(4)
+
         resumo = resumo.reindex(arquetipos)
 
         email_lider = dados.get("emailLider", "N/D")
@@ -138,7 +140,7 @@ def relatorio_detalhado():
             linhas.append({
                 "codigo": cod,
                 "frase": frase,
-                "percentual": round(percentual, 1),
+                "percentual": round(percentual, 3),
                 "tendencia": tendencia,
                 "arquetipos": arqs
             })
