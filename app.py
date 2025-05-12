@@ -140,7 +140,7 @@ def relatorio_detalhado():
             linhas.append({
                 "codigo": cod,
                 "frase": frase,
-                "percentual": round(percentual, 1),
+                "percentual": round(percentual, 3),
                 "tendencia": tendencia,
                 "arquetipos": arqs
             })
