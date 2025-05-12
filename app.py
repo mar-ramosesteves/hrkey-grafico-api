@@ -149,3 +149,61 @@ def relatorio_detalhado():
         print("❌ Erro no /relatorio:", str(e))
         return jsonify({"erro": str(e)}), 500
 
+
+
+	@app.route('/grafico-equipe', methods=['POST'])
+	def grafico_equipe():
+    	dados = request.get_json()
+    	email = dados.get('emailLider')
+    	data = dados.get('data')
+
+    # Caminho do CSV com dados da equipe
+    df = pd.read_csv('avaliacao_equipes.csv')
+
+    # Filtrar pelas entradas do líder e data
+    df_filtrado = df[(df['emailLider'] == email) & (df['data'] == data)]
+
+    if df_filtrado.empty:
+        return jsonify({'erro': 'Nenhuma avaliação encontrada para esse líder e data.'}), 404
+
+    resultados = []
+
+    for cod in df_filtrado['cod_afirmacao'].unique():
+        grupo = df_filtrado[df_filtrado['cod_afirmacao'] == cod]
+        media_estrelas = grupo['nota'].mean()
+
+        # Peso para equipe (escala reversa)
+        if media_estrelas == 1:
+            peso = 2
+        elif media_estrelas == 2:
+            peso = 1.5
+        elif media_estrelas == 3:
+            peso = 1
+        else:
+            peso = 0  # segurança
+
+        percentual = round((peso / 2) * 100, 1)
+
+        resultados.append({
+            'cod_afirmacao': cod,
+            'percentual': percentual
+        })
+
+        # Gerar gráfico
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(figsize=(6, 1.2))
+        ax.barh([cod], [percentual], color='orange')
+        ax.set_xlim([0, 100])
+        ax.set_title(f'{cod} - {percentual}%')
+        ax.set_xlabel('Percentual (Equipe)')
+        plt.tight_layout()
+
+        # Salvar
+        import os
+        if not os.path.exists('graficos_equipe'):
+            os.makedirs('graficos_equipe')
+        nome_arquivo = f'graficos_equipe/{email}_{data}_{cod}.png'
+        plt.savefig(nome_arquivo)
+        plt.close()
+
+    return jsonify({'mensagem': 'Gráficos gerados com sucesso!', 'total': len(resultados)})
