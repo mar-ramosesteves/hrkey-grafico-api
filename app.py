@@ -152,11 +152,11 @@ def relatorio_detalhado():
 
 
 
-	@app.route('/grafico-equipe', methods=['POST'])
-	def grafico_equipe():
-    	dados = request.get_json()
-    	email = dados.get('emailLider')
-    	data = dados.get('data')
+@app.route('/grafico-equipe', methods=['POST'])
+def grafico_equipe():
+    dados = request.get_json()
+    email = dados.get('emailLider')
+    data = dados.get('data')
 
     # Caminho do CSV com dados da equipe
     df = pd.read_csv('avaliacao_equipes.csv')
@@ -191,7 +191,6 @@ def relatorio_detalhado():
         })
 
         # Gerar gráfico
-        import matplotlib.pyplot as plt
         fig, ax = plt.subplots(figsize=(6, 1.2))
         ax.barh([cod], [percentual], color='orange')
         ax.set_xlim([0, 100])
