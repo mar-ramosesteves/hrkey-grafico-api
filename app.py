@@ -106,8 +106,12 @@ def relatorio_detalhado():
         if not dados:
             raise Exception("Nenhum dado recebido.")
 
-        # Carrega matriz com tendência (%)
+        # Carrega a matriz principal (com tendência)
         matriz = pd.read_excel("TABELA_GERAL_ARQUETIPOS_COM_CHAVE.xlsx")
+
+        # Carrega as frases corretas da autoavaliação
+        frases_auto = pd.read_excel("QUESTOES_AUTO_AVALIACAO.xlsx")
+        frases_dict = dict(zip(frases_auto["COD_AFIRMACAO"], frases_auto["AFIRMACAO"]))
 
         perguntas = [f"Q{str(i).zfill(2)}" for i in range(1, 50)]
         arquetipos = ["Imperativo", "Consultivo", "Cuidativo", "Resoluto", "Prescritivo", "Formador"]
@@ -119,20 +123,17 @@ def relatorio_detalhado():
                 continue
 
             linha_q = matriz[matriz["COD_AFIRMACAO"] == cod]
-            chaves = [
-                f"{arq}{nota}{cod}" for arq in arquetipos
-            ]
+            chaves = [f"{arq}{nota}{cod}" for arq in arquetipos]
             matches = matriz[matriz["CHAVE"].isin(chaves)]
             if matches.empty:
                 continue
 
-            # Seleciona os dois arquétipos com maior % tendência
             top2 = matches.sort_values(by="% Tendência", ascending=False).head(2)
             arqs = top2["ARQUETIPO"].tolist()
             tendencia = top2["Tendência"].values[0]
             percentual = top2["% Tendência"].values[0]
 
-            frase = linha_q["AFIRMACAO"].values[0] if not linha_q.empty else cod
+            frase = frases_dict.get(cod, cod)  # Busca no dicionário correto
 
             linhas.append({
                 "codigo": cod,
