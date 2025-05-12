@@ -11,7 +11,6 @@ CORS(app, resources={r"/*": {"origins": ["https://gestor.thehrkey.tech"]}})
 
 # Carrega a matriz de cálculo com a coluna CHAVE
 matriz = pd.read_excel("TABELA_GERAL_ARQUETIPOS_COM_CHAVE.xlsx")
-
 @app.route("/grafico", methods=["POST"])
 def gerar_grafico():
     try:
