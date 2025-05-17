@@ -207,3 +207,31 @@ def grafico_equipe():
         plt.close()
 
     return jsonify({'mensagem': 'Gráficos gerados com sucesso!', 'total': len(resultados)})
+
+
+
+import requests
+
+@app.route('/enviar-avaliacao', methods=['POST'])
+def enviar_avaliacao():
+    try:
+        dados = request.get_json()
+
+        resposta = requests.post(
+            'https://script.google.com/macros/s/AKfycbzAAMWWhjEnF-g0ZaZOUjP6et28T7_wXqXOxf4b9ysGodnA2lARUlR447PRehoRt2aivw/exec',
+            json=dados,
+            timeout=10
+        )
+
+        return jsonify({
+            'status': 'ok',
+            'google_response': resposta.text
+        }), 200
+
+    except Exception as e:
+        print("❌ Erro ao enviar para Google Script:", str(e))
+        return jsonify({
+            'status': 'erro',
+            'mensagem': str(e)
+        }), 500
+
