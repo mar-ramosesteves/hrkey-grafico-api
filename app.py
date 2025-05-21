@@ -268,3 +268,30 @@ def verificar_envio():
 
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
+
+
+@app.route('/validar-acesso-formulario', methods=['POST'])
+def validar_acesso_formulario():
+    try:
+        dados = request.get_json()
+        empresa = dados.get("empresa")
+        codrodada = dados.get("codrodada")
+        emailLider = dados.get("emailLider")
+        email = dados.get("email")
+        tipo = dados.get("tipo", "Avaliacao").replace(" ", "_")
+
+        if not all([empresa, codrodada, emailLider, email]):
+            return jsonify({"status": "erro", "mensagem": "Campos obrigatórios ausentes."}), 400
+
+        nome_arquivo = f"{email}_{tipo}.json"
+        caminho = f"Avaliacoes RH/{empresa}/{codrodada}/{emailLider}/{nome_arquivo}"
+        full_path = os.path.join("/mnt/data", caminho)
+
+        if os.path.exists(full_path):
+            return jsonify({"status": "bloqueado"})
+        else:
+            return jsonify({"status": "liberado"})
+
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
+
