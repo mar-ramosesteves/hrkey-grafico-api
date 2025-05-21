@@ -242,3 +242,29 @@ def enviar_avaliacao():
             'status': 'erro',
             'mensagem': str(e)
         }), 500
+
+
+@app.route('/verificar-envio', methods=['POST'])
+def verificar_envio():
+    try:
+        dados = request.get_json()
+        empresa = dados.get("empresa")
+        codrodada = dados.get("codrodada")
+        emailLider = dados.get("emailLider")
+        emailRespondente = dados.get("email")
+        tipo = dados.get("tipo", "Avaliacao").replace(" ", "_")
+
+        if not all([empresa, codrodada, emailLider, emailRespondente]):
+            return jsonify({"status": "erro", "mensagem": "Campos obrigatórios ausentes."}), 400
+
+        nome_arquivo = f"{emailRespondente}_{tipo}.json"
+        caminho = f"Avaliacoes RH/{empresa}/{codrodada}/{emailLider}/{nome_arquivo}"
+        full_path = os.path.join("/mnt/data", caminho)
+
+        if os.path.exists(full_path):
+            return jsonify({"status": "existe"})
+        else:
+            return jsonify({"status": "nao_existe"})
+
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
