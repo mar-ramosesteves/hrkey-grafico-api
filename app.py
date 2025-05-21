@@ -4,6 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import io
 import json
+import os
+
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": ["https://gestor.thehrkey.tech"]}})
