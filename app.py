@@ -218,15 +218,22 @@ def enviar_avaliacao():
         dados = request.get_json()
 
         resposta = requests.post(
-    'https://script.google.com/macros/s/AKfycby7XOBJVRaWyZcx23kJN8lYDLifshTfnR_LL238oR-DgwrznTAKewC-36MmOWa1dFMQ1g/exec',
-
+            'https://script.google.com/macros/s/AKfycby7XOBJVRaWyZcx23kJN8lYDLifshTfnR_LL238oR-DgwrznTAKewC-36MmOWa1dFMQ1g/exec',
             json=dados,
             timeout=10
         )
 
+        texto = resposta.text.strip()
+
+        if "já enviou" in texto:
+            return jsonify({
+                'status': 'duplicado',
+                'mensagem': texto
+            }), 409
+
         return jsonify({
             'status': 'ok',
-            'google_response': resposta.text
+            'mensagem': texto
         }), 200
 
     except Exception as e:
@@ -235,4 +242,3 @@ def enviar_avaliacao():
             'status': 'erro',
             'mensagem': str(e)
         }), 500
-
