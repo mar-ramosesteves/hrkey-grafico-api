@@ -220,7 +220,7 @@ def enviar_avaliacao():
         dados = request.get_json()
 
         resposta = requests.post(
-            'https://script.google.com/macros/s/AKfycby7XOBJVRaWyZcx23kJN8lYDLifshTfnR_LL238oR-DgwrznTAKewC-36MmOWa1dFMQ1g/exec',
+            'https://script.google.com/macros/s/AKfycbzJtyoDgPmGhemCzDUHgPHLyZrth7aCqZfJtjRACDtjS_ybhkLQdupCRlMOESJRigjvnQ/exec',
             json=dados,
             timeout=10
         )
