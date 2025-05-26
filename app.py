@@ -298,3 +298,52 @@ def validar_acesso_formulario():
     except Exception as e:
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
+
+
+
+@app.route('/gerar-graficos-comparativos', methods=['POST'])
+def gerar_graficos_comparativos():
+    try:
+        dados = request.get_json()
+        empresa = dados.get("empresa")
+        codrodada = dados.get("codrodada")
+        emailLider = dados.get("emailLider")
+
+        if not all([empresa, codrodada, emailLider]):
+            return jsonify({"erro": "Faltam parâmetros obrigatórios"}), 400
+
+        # Caminho da pasta no Google Drive
+        caminho_pasta = f"Avaliacoes RH/{empresa}/{codrodada}/{emailLider}"
+
+        # Listar arquivos no Drive
+        arquivos = listar_arquivos_drive(caminho_pasta)
+
+        # Separar e carregar os arquivos JSON
+        jsons_auto = []
+        jsons_equipe = []
+
+        for nome in arquivos:
+            if nome.endswith(".json"):
+                conteudo = baixar_arquivo_drive_json(caminho_pasta, nome)
+                if conteudo.get("tipo") == "Autoavaliação":
+                    jsons_auto.append(conteudo)
+                elif conteudo.get("tipo") == "Avaliação Equipe":
+                    jsons_equipe.append(conteudo)
+
+        if not jsons_auto:
+            return jsonify({"erro": "Autoavaliação não encontrada."}), 400
+        if not jsons_equipe:
+            return jsonify({"erro": "Nenhuma avaliação de equipe encontrada."}), 400
+
+        json_auto = jsons_auto[0]
+
+        # Gerar os gráficos e salvar no Drive
+        resultados = gerar_graficos_para_drive(json_auto, jsons_equipe, empresa, codrodada, emailLider)
+
+        return jsonify({
+            "mensagem": "Gráficos comparativos gerados com sucesso!",
+            "arquivos_salvos": resultados
+        }), 200
+
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
