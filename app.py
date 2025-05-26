@@ -347,3 +347,131 @@ def gerar_graficos_comparativos():
 
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
+
+
+
+import base64
+import tempfile
+import requests
+from matplotlib.backends.backend_pdf import PdfPages
+
+def gerar_graficos_para_drive(json_auto, jsons_equipe, empresa, codrodada, emailLider):
+    try:
+        matriz = df.copy()
+        arquetipos = ['Imperativo', 'Consultivo', 'Resoluto', 'Prescritivo', 'Formador', 'Cuidativo']
+        pontos_auto = {a: 0 for a in arquetipos}
+        max_auto = {a: 0 for a in arquetipos}
+        pontos_eq = {a: 0 for a in arquetipos}
+        max_eq = {a: 0 for a in arquetipos}
+
+        for i in range(1, 50):
+            q = f"Q{i:02d}"
+            estrelas_auto = int(json_auto["respostas"][q])
+            linhas_auto = matriz[(matriz["COD_AFIRMACAO"] == q) & (matriz["QTD_ESTRELAS"] == estrelas_auto)]
+            for _, linha in linhas_auto.iterrows():
+                a = linha["ARQUETIPO"]
+                pontos_auto[a] += float(linha["PONTOS_OBTIDOS"])
+                max_auto[a] += float(linha["PONTOS_MAXIMOS"])
+
+            for json_eq in jsons_equipe:
+                estrelas_eq = int(json_eq["respostas"][q])
+                linhas_eq = matriz[(matriz["COD_AFIRMACAO"] == q) & (matriz["QTD_ESTRELAS"] == estrelas_eq)]
+                for _, linha in linhas_eq.iterrows():
+                    a = linha["ARQUETIPO"]
+                    pontos_eq[a] += float(linha["PONTOS_OBTIDOS"])
+                    max_eq[a] += float(linha["PONTOS_MAXIMOS"])
+
+        percentuais_auto = {a: pontos_auto[a] / max_auto[a] if max_auto[a] > 0 else 0 for a in arquetipos}
+        percentuais_eq = {a: pontos_eq[a] / max_eq[a] if max_eq[a] > 0 else 0 for a in arquetipos}
+
+        pares = []
+        for i in range(1, 50):
+            q = f"Q{i:02d}"
+            estrelas_auto = int(json_auto["respostas"][q])
+            texto_auto = df_questoes_auto[df_questoes_auto["COD_AFIRMACAO"] == q]["AFIRMACAO"].values[0]
+            linha_auto = matriz[(matriz["COD_AFIRMACAO"] == q) & (matriz["QTD_ESTRELAS"] == estrelas_auto)]
+            perc_auto = float(linha_auto["% Tendência"].mean()) * 100
+            status_auto = linha_auto["Tendência"].mode().values[0]
+
+            valores_eq = []
+            status_eq = []
+            for json_eq in jsons_equipe:
+                estrelas = int(json_eq["respostas"][q])
+                linha = matriz[(matriz["COD_AFIRMACAO"] == q) & (matriz["QTD_ESTRELAS"] == estrelas)]
+                if not linha.empty:
+                    valores_eq.extend(linha["% Tendência"].astype(float).tolist())
+                    status_eq.extend(linha["Tendência"].tolist())
+
+            perc_eq = sum(valores_eq) / len(valores_eq) * 100 if valores_eq else 0
+            status_eq_final = max(set(status_eq), key=status_eq.count) if status_eq else ""
+            texto_eq = matriz[matriz["COD_AFIRMACAO"] == q]["AFIRMACAO"].values[0]
+
+            pares.append({
+                "auto": {"valor": perc_auto, "texto": texto_auto, "status": status_auto},
+                "equipe": {"valor": perc_eq, "texto": texto_eq, "status": status_eq_final}
+            })
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            caminho_pdf = tmp.name
+            with PdfPages(caminho_pdf) as pdf:
+                fig1 = gerar_grafico_principal(percentuais_auto, percentuais_eq, arquetipos)
+                pdf.savefig(fig1)
+                plt.close(fig1)
+
+                for bloco in range(0, len(pares), 3):
+                    fig = plt.figure(figsize=(8.5, 10), facecolor='white')
+                    spec = gridspec.GridSpec(nrows=6, ncols=1, figure=fig)
+
+                    for i, par in enumerate(pares[bloco:bloco+3]):
+                        if i >= 3: break
+                        # Auto
+                        ax_auto = fig.add_subplot(spec[i*2])
+                        ax_auto.barh([0], [par["auto"]["valor"]], color='blue', height=0.1)
+                        ax_auto.set_xlim(0, 100)
+                        ax_auto.set_yticks([])
+                        ax_auto.set_xticks(list(range(0, 110, 10)))
+                        ax_auto.set_xticklabels([f"{x}%" for x in range(0, 110, 10)], fontsize=8)
+                        ax_auto.set_title(f'{par["auto"]["texto"]}\n📌 Status: {par["auto"]["status"]}  •  Resultado: {par["auto"]["valor"]:.2f}%',
+                                          fontsize=10, pad=8, loc='left')
+                        ax_auto.set_facecolor('white')
+                        for spine in ax_auto.spines.values():
+                            spine.set_edgecolor('black')
+
+                        # Equipe
+                        ax_eq = fig.add_subplot(spec[i*2+1])
+                        ax_eq.barh([0], [par["equipe"]["valor"]], color='orange', height=0.1)
+                        ax_eq.set_xlim(0, 100)
+                        ax_eq.set_yticks([])
+                        ax_eq.set_xticks(list(range(0, 110, 10)))
+                        ax_eq.set_xticklabels([f"{x}%" for x in range(0, 110, 10)], fontsize=8)
+                        ax_eq.set_title(f'{par["equipe"]["texto"]}\n📌 Status: {par["equipe"]["status"]}  •  Resultado: {par["equipe"]["valor"]:.2f}%',
+                                        fontsize=10, pad=8, loc='left')
+                        ax_eq.set_facecolor('white')
+                        for spine in ax_eq.spines.values():
+                            spine.set_edgecolor('black')
+
+                    fig.tight_layout(pad=2.5)
+                    pdf.savefig(fig)
+                    plt.close(fig)
+
+        with open(caminho_pdf, "rb") as f:
+            pdf_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+        payload = {
+            "empresa": empresa,
+            "codrodada": codrodada,
+            "emailLider": emailLider,
+            "nomeArquivo": f"relatorio_{emailLider}.pdf",
+            "base64Image": pdf_b64
+        }
+
+        resposta = requests.post(
+            "https://script.google.com/macros/s/AKfycbw5AjoO_3WODqq5pLGDXAHxcC5UjoSoWN8_I_qW3PvL1DUqKBS4yiy_R2XCN7gq-Ozzcg/exec",
+            json=payload
+        )
+
+        return {"status": "ok", "resposta": resposta.text.strip(), "arquivo": f"relatorio_{emailLider}.pdf"}
+
+    except Exception as e:
+        return {"status": "erro", "mensagem": str(e)}
+
