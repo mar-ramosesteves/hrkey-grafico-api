@@ -316,7 +316,7 @@ def gerar_graficos_comparativos():
         caminho_pasta = f"Avaliacoes RH/{empresa}/{codrodada}/{emailLider}"
 
         # Listar arquivos no Drive
-        arquivos = listar_arquivos_drive(caminho_pasta)
+       # arquivos = listar_arquivos_drive(caminho_pasta) #ESTA FUNÇÃO NÃO É MAIS NECESSÁRIA
 
         # Separar e carregar os arquivos JSON
         jsons_auto = []
