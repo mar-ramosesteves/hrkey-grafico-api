@@ -360,9 +360,43 @@ def gerar_tabela_comparativa(json_auto, jsons_equipe, empresa, codrodada, emailL
         print("❌ Erro ao gerar a tabela comparativa:", str(e))
         return None
 
-@app.route('/gerar-relatorio-xlsx', methods=['POST', 'OPTIONS'])
 
-def gerar_relatorio_comparativo():
+import os
+import requests
+
+def baixar_pasta_do_drive(empresa, codrodada, emailLider):
+    caminho_local = f"/mnt/data/Avaliacoes RH/{empresa}/{codrodada}/{emailLider}"
+    os.makedirs(caminho_local, exist_ok=True)
+
+    payload = {
+        "empresa": empresa,
+        "codrodada": codrodada,
+        "emailLider": emailLider
+    }
+
+    resposta = requests.post(
+        "https://script.google.com/macros/s/AKfycbzMqrlVTOMeqPPqqGf9mfa-0-N8dTUWk7IA4X74VgpOm11nyGJvASMzOOCC2dIs2MfEyQ/exec",
+        json=payload
+    )
+
+    dados = resposta.json()
+    if "arquivos" not in dados:
+        raise Exception("Erro ao listar arquivos no Drive: " + str(dados))
+
+    for item in dados["arquivos"]:
+        nome = item["nome"]
+        conteudo = item["conteudo"]
+        caminho_arquivo = os.path.join(caminho_local, nome)
+        with open(caminho_arquivo, "w", encoding="utf-8") as f:
+            f.write(conteudo)
+
+    return caminho_local
+
+
+
+
+@app.route("/gerar-relatorio-xlsx", methods=["POST"])
+def gerar_relatorio_xlsx():
     try:
         dados = request.get_json()
         empresa = dados.get("empresa")
@@ -370,52 +404,36 @@ def gerar_relatorio_comparativo():
         emailLider = dados.get("emailLider")
 
         if not all([empresa, codrodada, emailLider]):
-            return jsonify({"erro": "Faltam dados obrigatórios"}), 400
+            return jsonify({"erro": "Faltam parâmetros obrigatórios."}), 400
 
-        caminho_pasta = f"Avaliacoes RH/{empresa}/{codrodada}/{emailLider}"
-        arquivos = os.listdir(os.path.join("/mnt/data", caminho_pasta))
+        # Baixar os arquivos da pasta do Drive para o Render
+        caminho_local = baixar_pasta_do_drive(empresa, codrodada, emailLider)
 
+        # Ler os arquivos JSON
         jsons_auto = []
         jsons_equipe = []
 
-        for nome in arquivos:
+        for nome in os.listdir(caminho_local):
             if nome.endswith(".json"):
-                conteudo = baixar_arquivo_drive_json(caminho_pasta, nome)
-                if conteudo.get("tipo") == "Autoavaliação":
-                    jsons_auto.append(conteudo)
-                elif conteudo.get("tipo") == "Avaliação Equipe":
-                    jsons_equipe.append(conteudo)
+                with open(os.path.join(caminho_local, nome), "r", encoding="utf-8") as f:
+                    conteudo = json.load(f)
+                    if conteudo.get("tipo") == "Autoavaliação":
+                        jsons_auto.append(conteudo)
+                    elif conteudo.get("tipo") == "Avaliação Equipe":
+                        jsons_equipe.append(conteudo)
 
         if not jsons_auto:
-            return jsonify({"erro": "Autoavaliação não encontrada."}), 400
+            return jsonify({"erro": "Nenhuma autoavaliação encontrada."}), 400
         if not jsons_equipe:
             return jsonify({"erro": "Nenhuma avaliação de equipe encontrada."}), 400
 
-        json_auto = jsons_auto[0]
-
-        caminho_excel = gerar_tabela_comparativa(json_auto, jsons_equipe)
-
-        # Salva no Drive
-        with open(caminho_excel, "rb") as f:
-            xlsx_b64 = base64.b64encode(f.read()).decode("utf-8")
-
-        payload = {
-            "empresa": empresa,
-            "codrodada": codrodada,
-            "emailLider": emailLider,
-            "nomeArquivo": f"comparativo_{emailLider}.xlsx",
-            "base64Image": xlsx_b64
-        }
-
-        resposta = requests.post(
-            "https://script.google.com/macros/s/AKfycbw5AjoO_3WODqq5pLGDXAHxcC5UjoSoWN8_I_qW3PvL1DUqKBS4yiy_R2XCN7gq-Ozzcg/exec",
-            json=payload
-        )
-
+        # Aqui você pode chamar a função de geração do XLSX (vamos fazer isso no próximo passo!)
         return jsonify({
-            "mensagem": "Arquivo comparativo gerado e salvo com sucesso!",
-            "resposta": resposta.text.strip()
-        }), 200
+            "mensagem": "✅ Arquivos baixados com sucesso!",
+            "autoavaliacoes": len(jsons_auto),
+            "avaliacoes_equipe": len(jsons_equipe),
+            "caminho": caminho_local
+        })
 
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
