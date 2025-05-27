@@ -422,52 +422,33 @@ def gerar_relatorio_xlsx():
         if not all([empresa, codrodada, emailLider]):
             return jsonify({"erro": "Faltam parâmetros obrigatórios."}), 400
 
-        # 🧩 Baixar os arquivos da pasta do Drive para o Render
-        caminho_local = baixar_pasta_do_drive(empresa, codrodada, emailLider)
+        # Baixar os arquivos da pasta no Google Drive
+        caminho_local = f"/tmp/{empresa}_{codrodada}_{emailLider}"
+        os.makedirs(caminho_local, exist_ok=True)
 
-        # 📂 Ler os arquivos JSON
-        jsons_auto = []
-        jsons_equipe = []
+        # Aqui você usaria a API do Google Drive para baixar os arquivos.
+        # Simulando a leitura local para este exemplo:
+        arquivos_drive = f"Avaliacoes RH/{empresa}/{codrodada}/{emailLider}"
+        if not os.path.exists(arquivos_drive):
+            return jsonify({"erro": f"📁 Pasta '{arquivos_drive}' não encontrada no servidor."}), 400
 
-        for nome in os.listdir(caminho_local):
+        for nome in os.listdir(arquivos_drive):
             if nome.endswith(".json"):
-                with open(os.path.join(caminho_local, nome), "r", encoding="utf-8") as f:
-                    conteudo = json.load(f)
-                    if conteudo.get("tipo") == "Autoavaliação":
-                        jsons_auto.append(conteudo)
-                    elif conteudo.get("tipo") == "Avaliação Equipe":
-                        jsons_equipe.append(conteudo)
+                origem = os.path.join(arquivos_drive, nome)
+                destino = os.path.join(caminho_local, nome)
+                with open(origem, "rb") as src, open(destino, "wb") as dst:
+                    dst.write(src.read())
 
-        if not jsons_auto:
-            return jsonify({"erro": "Nenhuma autoavaliação encontrada."}), 400
-        if not jsons_equipe:
-            return jsonify({"erro": "Nenhuma avaliação de equipe encontrada."}), 400
+        # Verifica se arquivos foram baixados
+        arquivos_baixados = os.listdir(caminho_local)
+        if not arquivos_baixados:
+            return jsonify({"erro": "Nenhum arquivo JSON encontrado para esse líder."}), 400
 
-        # 🚧 PRÓXIMO: gerar o XLSX com esses dados
         return jsonify({
             "mensagem": "✅ Arquivos baixados com sucesso!",
-            "autoavaliacoes": len(jsons_auto),
-            "avaliacoes_equipe": len(jsons_equipe),
-            "caminho": caminho_local
+            "caminho_local": caminho_local,
+            "quantidade_arquivos": len(arquivos_baixados)
         })
-
-    except Exception as e:
-        return jsonify({"erro": str(e)}), 500
-
-# 🔧 Função auxiliar usada acima
-def baixar_pasta_do_drive(empresa, codrodada, emailLider):
-    caminho_local = f"/mnt/data/Avaliacoes RH/{empresa}/{codrodada}/{emailLider}"
-    os.makedirs(caminho_local, exist_ok=True)
-
-    arquivos = listar_arquivos_drive(f"Avaliacoes RH/{empresa}/{codrodada}/{emailLider}")
-    for nome in arquivos:
-        if nome.endswith(".json"):
-            conteudo = baixar_arquivo_drive_json(f"Avaliacoes RH/{empresa}/{codrodada}/{emailLider}", nome)
-            with open(os.path.join(caminho_local, nome), "w", encoding="utf-8") as f:
-                json.dump(conteudo, f, ensure_ascii=False, indent=2)
-
-    return caminho_local
-
 
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
