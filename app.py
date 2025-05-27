@@ -301,7 +301,7 @@ def validar_acesso_formulario():
 
 
 
-    @app.route('/gerar-graficos-comparativos', methods=['POST'])
+@app.route('/gerar-graficos-comparativos', methods=['POST'])
 def gerar_graficos_comparativos():
     try:
         dados = request.get_json()
