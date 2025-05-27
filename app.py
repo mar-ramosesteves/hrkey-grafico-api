@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import io
 import json
 import os
-from flask_cors import CORS
+
+
 
 
 
@@ -315,7 +316,7 @@ def validar_acesso_formulario():
 
 
 
-import pandas as pd
+
 
 def gerar_tabela_comparativa(json_auto, jsons_equipe, empresa, codrodada, emailLider):
     try:
@@ -361,7 +362,7 @@ def gerar_tabela_comparativa(json_auto, jsons_equipe, empresa, codrodada, emailL
         return None
 
 
-import os
+
 import requests
 
 def baixar_pasta_do_drive(empresa, codrodada, emailLider):
@@ -395,11 +396,9 @@ def baixar_pasta_do_drive(empresa, codrodada, emailLider):
 
 
 
-import os
-import json
-from flask import request, jsonify
-from flask import Flask
-from flask_cors import CORS
+
+
+
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -410,6 +409,12 @@ def aplicar_cors(response):
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return response
+
+import os
+import json
+import pandas as pd
+from flask import request, jsonify
+from flask_cors import CORS
 
 @app.route("/gerar-relatorio-xlsx", methods=["POST"])
 def gerar_relatorio_xlsx():
@@ -422,38 +427,60 @@ def gerar_relatorio_xlsx():
         if not all([empresa, codrodada, emailLider]):
             return jsonify({"erro": "Faltam parâmetros obrigatórios."}), 400
 
-        # Baixar os arquivos da pasta no Google Drive
-        caminho_local = f"/tmp/{empresa}_{codrodada}_{emailLider}"
-        os.makedirs(caminho_local, exist_ok=True)
+        # Caminho seguro no Render
+        pasta_local = f"/tmp/{empresa}/{codrodada}/{emailLider}"
+        os.makedirs(pasta_local, exist_ok=True)
 
-        # Aqui você usaria a API do Google Drive para baixar os arquivos.
-        # Simulando a leitura local para este exemplo:
-        arquivos_drive = f"Avaliacoes RH/{empresa}/{codrodada}/{emailLider}"
-        if not os.path.exists(arquivos_drive):
-            return jsonify({"erro": f"📁 Pasta '{arquivos_drive}' não encontrada no servidor."}), 400
+        # ⚠️ Simulação de arquivos (remover quando integração com Google Drive estiver ativa)
+        exemplo_json_auto = {
+            "tipo": "Autoavaliação",
+            "respostas": {f"Q{i:02d}": "5" for i in range(1, 50)}
+        }
+        exemplo_json_equipe = {
+            "tipo": "Avaliação Equipe",
+            "respostas": {f"Q{i:02d}": "4" for i in range(1, 50)}
+        }
+        with open(os.path.join(pasta_local, "auto.json"), "w", encoding="utf-8") as f:
+            json.dump(exemplo_json_auto, f, ensure_ascii=False, indent=2)
+        for i in range(2):
+            with open(os.path.join(pasta_local, f"equipe{i+1}.json"), "w", encoding="utf-8") as f:
+                json.dump(exemplo_json_equipe, f, ensure_ascii=False, indent=2)
 
-        for nome in os.listdir(arquivos_drive):
+        # Leitura real dos arquivos
+        jsons_auto, jsons_equipe = [], []
+        for nome in os.listdir(pasta_local):
             if nome.endswith(".json"):
-                origem = os.path.join(arquivos_drive, nome)
-                destino = os.path.join(caminho_local, nome)
-                with open(origem, "rb") as src, open(destino, "wb") as dst:
-                    dst.write(src.read())
+                with open(os.path.join(pasta_local, nome), "r", encoding="utf-8") as f:
+                    conteudo = json.load(f)
+                    if conteudo.get("tipo") == "Autoavaliação":
+                        jsons_auto.append(conteudo)
+                    elif conteudo.get("tipo") == "Avaliação Equipe":
+                        jsons_equipe.append(conteudo)
 
-        # Verifica se arquivos foram baixados
-        arquivos_baixados = os.listdir(caminho_local)
-        if not arquivos_baixados:
-            return jsonify({"erro": "Nenhum arquivo JSON encontrado para esse líder."}), 400
+        if not jsons_auto:
+            return jsonify({"erro": "Nenhuma autoavaliação encontrada."}), 400
+        if not jsons_equipe:
+            return jsonify({"erro": "Nenhuma avaliação de equipe encontrada."}), 400
+
+        # ✅ Gerar dataframe (por enquanto: respostas puras)
+        df = pd.DataFrame()
+        for i, av in enumerate(jsons_equipe):
+            col = pd.Series(av["respostas"], name=f"Equipe {i+1}")
+            df = pd.concat([df, col], axis=1)
+
+        df["Autoavaliacao"] = pd.Series(jsons_auto[0]["respostas"])
+        df.to_excel(os.path.join(pasta_local, "relatorio.xlsx"), index_label="Questao")
 
         return jsonify({
-            "mensagem": "✅ Arquivos baixados com sucesso!",
-            "caminho_local": caminho_local,
-            "quantidade_arquivos": len(arquivos_baixados)
+            "mensagem": "✅ XLSX gerado com sucesso!",
+            "arquivo": f"relatorio.xlsx",
+            "caminho": pasta_local
         })
 
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
-
+# Manter CORS depois
 @app.after_request
 def aplicar_cors(response):
     response.headers["Access-Control-Allow-Origin"] = "https://gestor.thehrkey.tech"
