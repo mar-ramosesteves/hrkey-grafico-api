@@ -10,7 +10,8 @@ from flask_cors import CORS
 
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": ["https://gestor.thehrkey.tech"]}})
+CORS(app, resources={r"/*": {"origins": ["https://gestor.thehrkey.tech"], "methods": ["GET", "POST", "OPTIONS"]}})
+
 
 
 # Carrega a matriz de cálculo com a coluna CHAVE
