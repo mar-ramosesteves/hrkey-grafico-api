@@ -471,11 +471,44 @@ def gerar_relatorio_xlsx():
         df["Autoavaliacao"] = pd.Series(jsons_auto[0]["respostas"])
         df.to_excel(os.path.join(pasta_local, "relatorio.xlsx"), index_label="Questao")
 
-        return jsonify({
+        # Nome descritivo do arquivo
+        nome_arquivo = f"relatorio_{empresa}_{codrodada}_{emailLider}.xlsx"
+
+        # Lê o conteúdo do arquivo XLSX gerado
+        caminho_arquivo_xlsx = os.path.join(caminho_pasta, "relatorio.xlsx")
+        with open(caminho_arquivo_xlsx, "rb") as f:
+            conteudo_xlsx_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+        # Monta o payload para envio ao Google Script
+        payload = {
+            "empresa": empresa,
+            "codrodada": codrodada,
+            "emailLider": emailLider,
+            "nomeArquivo": nome_arquivo,
+            "base64Image": conteudo_xlsx_b64
+        }
+
+        # Envia para o Google Drive (via Google Apps Script)
+        resposta = requests.post(
+            "https://script.google.com/macros/s/AKfycbw5AjoO_3WODqq5pLGDXAHxcC5UjoSoWN8_I_qW3PvL1DUqKBS4yiy_R2XCN7gq-Ozzcg/exec",
+            json=payload
+        )
+
+        # Adiciona status da resposta no retorno final
+        status_envio = resposta.text.strip()
+
+
+
+
+
+        
+                return jsonify({
             "mensagem": "✅ XLSX gerado com sucesso!",
-            "arquivo": f"relatorio.xlsx",
-            "caminho": pasta_local
+            "arquivo": nome_arquivo,
+            "caminho": caminho_pasta,
+            "envio": status_envio
         })
+
 
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
