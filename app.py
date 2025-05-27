@@ -395,6 +395,22 @@ def baixar_pasta_do_drive(empresa, codrodada, emailLider):
 
 
 
+import os
+import json
+from flask import request, jsonify
+from flask import Flask
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app, supports_credentials=True)
+
+@app.after_request
+def aplicar_cors(response):
+    response.headers["Access-Control-Allow-Origin"] = "https://gestor.thehrkey.tech"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
+
 @app.route("/gerar-relatorio-xlsx", methods=["POST"])
 def gerar_relatorio_xlsx():
     try:
@@ -406,10 +422,10 @@ def gerar_relatorio_xlsx():
         if not all([empresa, codrodada, emailLider]):
             return jsonify({"erro": "Faltam parâmetros obrigatórios."}), 400
 
-        # Baixar os arquivos da pasta do Drive para o Render
+        # 🧩 Baixar os arquivos da pasta do Drive para o Render
         caminho_local = baixar_pasta_do_drive(empresa, codrodada, emailLider)
 
-        # Ler os arquivos JSON
+        # 📂 Ler os arquivos JSON
         jsons_auto = []
         jsons_equipe = []
 
@@ -427,13 +443,31 @@ def gerar_relatorio_xlsx():
         if not jsons_equipe:
             return jsonify({"erro": "Nenhuma avaliação de equipe encontrada."}), 400
 
-        # Aqui você pode chamar a função de geração do XLSX (vamos fazer isso no próximo passo!)
+        # 🚧 PRÓXIMO: gerar o XLSX com esses dados
         return jsonify({
             "mensagem": "✅ Arquivos baixados com sucesso!",
             "autoavaliacoes": len(jsons_auto),
             "avaliacoes_equipe": len(jsons_equipe),
             "caminho": caminho_local
         })
+
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+# 🔧 Função auxiliar usada acima
+def baixar_pasta_do_drive(empresa, codrodada, emailLider):
+    caminho_local = f"/mnt/data/Avaliacoes RH/{empresa}/{codrodada}/{emailLider}"
+    os.makedirs(caminho_local, exist_ok=True)
+
+    arquivos = listar_arquivos_drive(f"Avaliacoes RH/{empresa}/{codrodada}/{emailLider}")
+    for nome in arquivos:
+        if nome.endswith(".json"):
+            conteudo = baixar_arquivo_drive_json(f"Avaliacoes RH/{empresa}/{codrodada}/{emailLider}", nome)
+            with open(os.path.join(caminho_local, nome), "w", encoding="utf-8") as f:
+                json.dump(conteudo, f, ensure_ascii=False, indent=2)
+
+    return caminho_local
+
 
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
