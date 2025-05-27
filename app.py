@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import io
 import json
 import os
+from flask_cors import CORS
+
 
 
 app = Flask(__name__)
