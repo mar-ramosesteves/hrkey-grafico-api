@@ -10,7 +10,10 @@ from flask_cors import CORS
 
 
 app = Flask(__name__)
+from flask_cors import CORS
+
 CORS(app, resources={r"/*": {"origins": ["https://gestor.thehrkey.tech"], "methods": ["GET", "POST", "OPTIONS"]}})
+
 
 
 
@@ -407,4 +410,13 @@ def gerar_relatorio_comparativo():
 
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
+
+
+@app.after_request
+def aplicar_cors(response):
+    response.headers["Access-Control-Allow-Origin"] = "https://gestor.thehrkey.tech"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
+
 
