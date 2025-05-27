@@ -360,7 +360,8 @@ def gerar_tabela_comparativa(json_auto, jsons_equipe, empresa, codrodada, emailL
         print("❌ Erro ao gerar a tabela comparativa:", str(e))
         return None
 
-@app.route('/gerar-relatorio-comparativo', methods=['POST'])
+@app.route('/gerar-relatorio-xlsx', methods=['POST', 'OPTIONS'])
+
 def gerar_relatorio_comparativo():
     try:
         dados = request.get_json()
