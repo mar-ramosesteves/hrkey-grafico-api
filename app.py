@@ -412,6 +412,8 @@ def aplicar_cors(response):
 
 import os
 import json
+import base64
+import requests
 import pandas as pd
 from flask import request, jsonify
 from flask_cors import CORS
@@ -428,10 +430,10 @@ def gerar_relatorio_xlsx():
             return jsonify({"erro": "Faltam parâmetros obrigatórios."}), 400
 
         # Caminho seguro no Render
-        pasta_local = f"/tmp/{empresa}/{codrodada}/{emailLider}"
-        os.makedirs(pasta_local, exist_ok=True)
+        caminho_pasta = f"/tmp/{empresa}/{codrodada}/{emailLider}"
+        os.makedirs(caminho_pasta, exist_ok=True)
 
-        # ⚠️ Simulação de arquivos (remover quando integração com Google Drive estiver ativa)
+        # ⚠️ Simulação de arquivos (remover depois)
         exemplo_json_auto = {
             "tipo": "Autoavaliação",
             "respostas": {f"Q{i:02d}": "5" for i in range(1, 50)}
@@ -440,17 +442,17 @@ def gerar_relatorio_xlsx():
             "tipo": "Avaliação Equipe",
             "respostas": {f"Q{i:02d}": "4" for i in range(1, 50)}
         }
-        with open(os.path.join(pasta_local, "auto.json"), "w", encoding="utf-8") as f:
+        with open(os.path.join(caminho_pasta, "auto.json"), "w", encoding="utf-8") as f:
             json.dump(exemplo_json_auto, f, ensure_ascii=False, indent=2)
         for i in range(2):
-            with open(os.path.join(pasta_local, f"equipe{i+1}.json"), "w", encoding="utf-8") as f:
+            with open(os.path.join(caminho_pasta, f"equipe{i+1}.json"), "w", encoding="utf-8") as f:
                 json.dump(exemplo_json_equipe, f, ensure_ascii=False, indent=2)
 
         # Leitura real dos arquivos
         jsons_auto, jsons_equipe = [], []
-        for nome in os.listdir(pasta_local):
+        for nome in os.listdir(caminho_pasta):
             if nome.endswith(".json"):
-                with open(os.path.join(pasta_local, nome), "r", encoding="utf-8") as f:
+                with open(os.path.join(caminho_pasta, nome), "r", encoding="utf-8") as f:
                     conteudo = json.load(f)
                     if conteudo.get("tipo") == "Autoavaliação":
                         jsons_auto.append(conteudo)
@@ -462,24 +464,24 @@ def gerar_relatorio_xlsx():
         if not jsons_equipe:
             return jsonify({"erro": "Nenhuma avaliação de equipe encontrada."}), 400
 
-        # ✅ Gerar dataframe (por enquanto: respostas puras)
+        # ✅ Gerar dataframe com respostas
         df = pd.DataFrame()
         for i, av in enumerate(jsons_equipe):
             col = pd.Series(av["respostas"], name=f"Equipe {i+1}")
             df = pd.concat([df, col], axis=1)
 
         df["Autoavaliacao"] = pd.Series(jsons_auto[0]["respostas"])
-        df.to_excel(os.path.join(pasta_local, "relatorio.xlsx"), index_label="Questao")
+        df.to_excel(os.path.join(caminho_pasta, "relatorio.xlsx"), index_label="Questao")
 
         # Nome descritivo do arquivo
         nome_arquivo = f"relatorio_{empresa}_{codrodada}_{emailLider}.xlsx"
-
-        # Lê o conteúdo do arquivo XLSX gerado
         caminho_arquivo_xlsx = os.path.join(caminho_pasta, "relatorio.xlsx")
+
+        # Codifica em base64
         with open(caminho_arquivo_xlsx, "rb") as f:
             conteudo_xlsx_b64 = base64.b64encode(f.read()).decode("utf-8")
 
-        # Monta o payload para envio ao Google Script
+        # Envia para o Google Drive via Apps Script
         payload = {
             "empresa": empresa,
             "codrodada": codrodada,
@@ -488,32 +490,24 @@ def gerar_relatorio_xlsx():
             "base64Image": conteudo_xlsx_b64
         }
 
-        # Envia para o Google Drive (via Google Apps Script)
         resposta = requests.post(
             "https://script.google.com/macros/s/AKfycbw5AjoO_3WODqq5pLGDXAHxcC5UjoSoWN8_I_qW3PvL1DUqKBS4yiy_R2XCN7gq-Ozzcg/exec",
             json=payload
         )
-
-        # Adiciona status da resposta no retorno final
         status_envio = resposta.text.strip()
 
-
-
-
-
-        
-                return jsonify({
+        return jsonify({
             "mensagem": "✅ XLSX gerado com sucesso!",
             "arquivo": nome_arquivo,
             "caminho": caminho_pasta,
             "envio": status_envio
         })
 
-
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
-# Manter CORS depois
+
+# Manter CORS
 @app.after_request
 def aplicar_cors(response):
     response.headers["Access-Control-Allow-Origin"] = "https://gestor.thehrkey.tech"
