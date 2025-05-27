@@ -345,3 +345,63 @@ def gerar_tabela_comparativa(json_auto, jsons_equipe, empresa, codrodada, emailL
     except Exception as e:
         print("❌ Erro ao gerar a tabela comparativa:", str(e))
         return None
+
+@app.route('/gerar-relatorio-comparativo', methods=['POST'])
+def gerar_relatorio_comparativo():
+    try:
+        dados = request.get_json()
+        empresa = dados.get("empresa")
+        codrodada = dados.get("codrodada")
+        emailLider = dados.get("emailLider")
+
+        if not all([empresa, codrodada, emailLider]):
+            return jsonify({"erro": "Faltam dados obrigatórios"}), 400
+
+        caminho_pasta = f"Avaliacoes RH/{empresa}/{codrodada}/{emailLider}"
+        arquivos = os.listdir(os.path.join("/mnt/data", caminho_pasta))
+
+        jsons_auto = []
+        jsons_equipe = []
+
+        for nome in arquivos:
+            if nome.endswith(".json"):
+                conteudo = baixar_arquivo_drive_json(caminho_pasta, nome)
+                if conteudo.get("tipo") == "Autoavaliação":
+                    jsons_auto.append(conteudo)
+                elif conteudo.get("tipo") == "Avaliação Equipe":
+                    jsons_equipe.append(conteudo)
+
+        if not jsons_auto:
+            return jsonify({"erro": "Autoavaliação não encontrada."}), 400
+        if not jsons_equipe:
+            return jsonify({"erro": "Nenhuma avaliação de equipe encontrada."}), 400
+
+        json_auto = jsons_auto[0]
+
+        caminho_excel = gerar_tabela_comparativa(json_auto, jsons_equipe)
+
+        # Salva no Drive
+        with open(caminho_excel, "rb") as f:
+            xlsx_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+        payload = {
+            "empresa": empresa,
+            "codrodada": codrodada,
+            "emailLider": emailLider,
+            "nomeArquivo": f"comparativo_{emailLider}.xlsx",
+            "base64Image": xlsx_b64
+        }
+
+        resposta = requests.post(
+            "https://script.google.com/macros/s/AKfycbw5AjoO_3WODqq5pLGDXAHxcC5UjoSoWN8_I_qW3PvL1DUqKBS4yiy_R2XCN7gq-Ozzcg/exec",
+            json=payload
+        )
+
+        return jsonify({
+            "mensagem": "Arquivo comparativo gerado e salvo com sucesso!",
+            "resposta": resposta.text.strip()
+        }), 200
+
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
