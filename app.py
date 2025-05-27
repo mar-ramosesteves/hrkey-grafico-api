@@ -301,43 +301,19 @@ def validar_acesso_formulario():
 
 
 
-@app.route('/gerar-graficos-comparativos', methods=['POST'])
+    @app.route('/gerar-graficos-comparativos', methods=['POST'])
 def gerar_graficos_comparativos():
     try:
         dados = request.get_json()
         empresa = dados.get("empresa")
         codrodada = dados.get("codrodada")
         emailLider = dados.get("emailLider")
+        json_auto = dados.get("json_auto")
+        jsons_equipe = dados.get("jsons_equipe")
 
-        if not all([empresa, codrodada, emailLider]):
-            return jsonify({"erro": "Faltam parâmetros obrigatórios"}), 400
+        if not all([empresa, codrodada, emailLider, json_auto, jsons_equipe]):
+            return jsonify({"erro": "Faltam dados obrigatórios para gerar os gráficos."}), 400
 
-        # Caminho da pasta no Google Drive
-        caminho_pasta = f"Avaliacoes RH/{empresa}/{codrodada}/{emailLider}"
-
-        # Listar arquivos no Drive
-       # arquivos = listar_arquivos_drive(caminho_pasta) #ESTA FUNÇÃO NÃO É MAIS NECESSÁRIA
-
-        # Separar e carregar os arquivos JSON
-        jsons_auto = []
-        jsons_equipe = []
-
-        for nome in arquivos:
-            if nome.endswith(".json"):
-                conteudo = baixar_arquivo_drive_json(caminho_pasta, nome)
-                if conteudo.get("tipo") == "Autoavaliação":
-                    jsons_auto.append(conteudo)
-                elif conteudo.get("tipo") == "Avaliação Equipe":
-                    jsons_equipe.append(conteudo)
-
-        if not jsons_auto:
-            return jsonify({"erro": "Autoavaliação não encontrada."}), 400
-        if not jsons_equipe:
-            return jsonify({"erro": "Nenhuma avaliação de equipe encontrada."}), 400
-
-        json_auto = jsons_auto[0]
-
-        # Gerar os gráficos e salvar no Drive
         resultados = gerar_graficos_para_drive(json_auto, jsons_equipe, empresa, codrodada, emailLider)
 
         return jsonify({
@@ -347,8 +323,6 @@ def gerar_graficos_comparativos():
 
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
-
-
 
 import base64
 import tempfile
@@ -424,7 +398,6 @@ def gerar_graficos_para_drive(json_auto, jsons_equipe, empresa, codrodada, email
 
                     for i, par in enumerate(pares[bloco:bloco+3]):
                         if i >= 3: break
-                        # Auto
                         ax_auto = fig.add_subplot(spec[i*2])
                         ax_auto.barh([0], [par["auto"]["valor"]], color='blue', height=0.1)
                         ax_auto.set_xlim(0, 100)
@@ -437,7 +410,6 @@ def gerar_graficos_para_drive(json_auto, jsons_equipe, empresa, codrodada, email
                         for spine in ax_auto.spines.values():
                             spine.set_edgecolor('black')
 
-                        # Equipe
                         ax_eq = fig.add_subplot(spec[i*2+1])
                         ax_eq.barh([0], [par["equipe"]["valor"]], color='orange', height=0.1)
                         ax_eq.set_xlim(0, 100)
@@ -474,4 +446,3 @@ def gerar_graficos_para_drive(json_auto, jsons_equipe, empresa, codrodada, email
 
     except Exception as e:
         return {"status": "erro", "mensagem": str(e)}
-
