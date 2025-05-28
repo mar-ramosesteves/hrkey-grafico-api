@@ -229,7 +229,7 @@ def grafico_equipe():
 
 import requests
 
-@app.route('/enviar-avaliacao', methods=['POST'])
+@app.route('/enviar-avaliacao', methods=['POST','OPTIONS'])
 def enviar_avaliacao():
     try:
         dados = request.get_json()
@@ -418,7 +418,7 @@ import pandas as pd
 from flask import request, jsonify
 from flask_cors import CORS
 
-@app.route("/gerar-relatorio-xlsx", methods=["POST"])
+@app.route("/gerar-relatorio-xlsx", methods=["POST","OPTIONS"])
 def gerar_relatorio_xlsx():
     try:
         dados = request.get_json()
@@ -515,7 +515,7 @@ def aplicar_cors(response):
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return response
 
-@app.route("/gerar-relatorio-json", methods=["POST"])
+@app.route("/gerar-relatorio-json", methods=["POST","OPTIONS"])
 def gerar_relatorio_json():
     try:
         print("📩 request.data:", request.data)
@@ -594,10 +594,5 @@ def gerar_relatorio_json():
         return jsonify({"erro": str(e)}), 500
 
 
-@app.after_request
-def aplicar_cors(response):
-    response.headers["Access-Control-Allow-Origin"] = "https://gestor.thehrkey.tech"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    return response
+
 
