@@ -520,7 +520,7 @@ def gerar_relatorio_json():
     try:
         print("📩 request.data:", request.data)
 
-        dados = request.get_json(force=True)  # força leitura segura do JSON
+        dados = request.get_json(force=True)
         empresa = dados.get("empresa")
         codrodada = dados.get("codrodada")
         emailLider = dados.get("emailLider")
@@ -528,13 +528,11 @@ def gerar_relatorio_json():
         if not all([empresa, codrodada, emailLider]):
             return jsonify({"erro": "Faltam parâmetros obrigatórios."}), 400
 
-        # 🔹 Baixa os arquivos JSON da pasta do líder
-        caminho_local = f"/mnt/data/Avaliacoes RH/{empresa}/{codrodada}/{emailLider}"
+        caminho_local = os.path.join("/mnt/data", "Avaliacoes RH", empresa, codrodada, emailLider)
 
         if not os.path.exists(caminho_local):
             return jsonify({"erro": f"Pasta '{caminho_local}' não encontrada no servidor."}), 400
 
-        # 🔹 Lê os arquivos JSON
         jsons_auto = []
         jsons_equipe = []
 
@@ -556,7 +554,6 @@ def gerar_relatorio_json():
         if not jsons_equipe:
             return jsonify({"erro": "Nenhuma avaliação de equipe encontrada."}), 400
 
-        # 🔹 Calcula média por questão
         total_respostas = {}
         quantidade_respostas = {}
 
@@ -566,15 +563,14 @@ def gerar_relatorio_json():
                     valor_float = float(valor)
                     total_respostas[q] = total_respostas.get(q, 0) + valor_float
                     quantidade_respostas[q] = quantidade_respostas.get(q, 0) + 1
-                except ValueError:
-                    print(f"⚠️ Valor inválido em {q}: {valor}")
+                except Exception as e:
+                    print(f"⚠️ Erro no valor da questão {q}: {e}")
 
         medias_equipe = {
             q: round(total_respostas[q] / quantidade_respostas[q], 2)
             for q in total_respostas
         }
 
-        # 🔹 Prepara o dicionário final
         relatorio = {
             "empresa": empresa,
             "codrodada": codrodada,
@@ -584,7 +580,6 @@ def gerar_relatorio_json():
             "qtdAvaliacoesEquipe": len(jsons_equipe)
         }
 
-        # 🔹 Salva como relatorio_completo.json
         caminho_arquivo = os.path.join(caminho_local, "relatorio_completo.json")
         with open(caminho_arquivo, "w", encoding="utf-8") as f:
             json.dump(relatorio, f, ensure_ascii=False, indent=2)
