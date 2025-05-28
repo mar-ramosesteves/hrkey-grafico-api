@@ -515,4 +515,73 @@ def aplicar_cors(response):
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return response
 
+@app.route("/gerar-relatorio-json", methods=["POST"])
+def gerar_relatorio_json():
+    try:
+        dados = request.get_json()
+        empresa = dados.get("empresa")
+        codrodada = dados.get("codrodada")
+        emailLider = dados.get("emailLider")
+
+        if not all([empresa, codrodada, emailLider]):
+            return jsonify({"erro": "Faltam parâmetros obrigatórios."}), 400
+
+        # 🔹 Baixa os arquivos JSON da pasta do líder
+        caminho_local = baixar_pasta_do_drive(empresa, codrodada, emailLider)
+
+        # 🔹 Lê os arquivos JSON
+        jsons_auto = []
+        jsons_equipe = []
+
+        for nome in os.listdir(caminho_local):
+            if nome.endswith(".json"):
+                with open(os.path.join(caminho_local, nome), "r", encoding="utf-8") as f:
+                    conteudo = json.load(f)
+                    if conteudo.get("tipo") == "Autoavaliação":
+                        jsons_auto.append(conteudo)
+                    elif conteudo.get("tipo") == "Avaliação Equipe":
+                        jsons_equipe.append(conteudo)
+
+        if not jsons_auto:
+            return jsonify({"erro": "Nenhuma autoavaliação encontrada."}), 400
+        if not jsons_equipe:
+            return jsonify({"erro": "Nenhuma avaliação de equipe encontrada."}), 400
+
+        # 🔹 Calcula média por questão
+        total_respostas = {}
+        quantidade_respostas = {}
+
+        for avaliacao in jsons_equipe:
+            for q, valor in avaliacao["respostas"].items():
+                total_respostas[q] = total_respostas.get(q, 0) + float(valor)
+                quantidade_respostas[q] = quantidade_respostas.get(q, 0) + 1
+
+        medias_equipe = {
+            q: round(total_respostas[q] / quantidade_respostas[q], 2)
+            for q in total_respostas
+        }
+
+        # 🔹 Prepara o dicionário final
+        relatorio = {
+            "empresa": empresa,
+            "codrodada": codrodada,
+            "emailLider": emailLider,
+            "autoavaliacao": jsons_auto[0]["respostas"],
+            "mediaEquipe": medias_equipe,
+            "qtdAvaliacoesEquipe": len(jsons_equipe)
+        }
+
+        # 🔹 Salva como relatorio_completo.json
+        caminho_arquivo = os.path.join(caminho_local, "relatorio_completo.json")
+        with open(caminho_arquivo, "w", encoding="utf-8") as f:
+            json.dump(relatorio, f, ensure_ascii=False, indent=2)
+
+        return jsonify({
+            "mensagem": "✅ Relatório consolidado salvo como relatorio_completo.json!",
+            "arquivo": "relatorio_completo.json",
+            "caminho": caminho_local
+        })
+
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
 
