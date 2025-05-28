@@ -260,3 +260,106 @@ def grafico_equipe():
     except Exception as e:
         print("❌ Erro no /grafico-equipe:", str(e))
         return jsonify({"erro": str(e)}), 500
+
+
+import requests
+import os
+
+GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMqrlVTOMeqPPqqGf9mfa-0-N8dTUWk7IA4X74VgpOm11nyGJvASMzOOCC2dIs2MfEyQ/exec"
+PASTA_RAIZ = "Avaliacoes RH"
+
+@app.route("/enviar-avaliacao", methods=["POST"])
+def enviar_avaliacao():
+    try:
+        dados = request.get_json()
+        if not dados:
+            raise Exception("Nenhum dado recebido.")
+
+        # Campos obrigatórios
+        emailRespondente = dados.get("email")
+        nomeRespondente = dados.get("nome")
+        nomeLider = dados.get("nomeLider")
+        emailLider = dados.get("emailLider")
+        empresa = dados.get("empresa")
+        codRodada = dados.get("codrodada")
+        tipo = dados.get("tipo")  # 'autoavaliacao' ou 'avaliacao_equipe'
+
+        if not all([emailRespondente, emailLider, empresa, codRodada, tipo]):
+            raise Exception("Campos obrigatórios ausentes.")
+
+        # Geração do nome do arquivo e caminho
+        nome_arquivo = f"{emailRespondente}_{tipo}.json"
+        caminho = f"{PASTA_RAIZ}/{empresa}/{codRodada}/{emailLider}/{nome_arquivo}"
+
+        # Envia o arquivo via Google Script
+        payload = {
+            "arquivo": nome_arquivo,
+            "caminho": caminho,
+            "conteudo": json.dumps(dados, ensure_ascii=False)
+        }
+
+        resposta = requests.post(GOOGLE_SCRIPT_URL, json=payload)
+        if resposta.status_code != 200:
+            raise Exception(f"Erro ao enviar para o Drive: {resposta.text}")
+
+        return jsonify({"mensagem": "✅ Avaliação enviada com sucesso!"})
+
+    except Exception as e:
+        print("❌ Erro no /enviar-avaliacao:", str(e))
+        return jsonify({"erro": str(e)}), 500
+
+
+@app.route("/verificar-envio", methods=["POST"])
+def verificar_envio():
+    try:
+        dados = request.get_json()
+        email = dados.get("email")
+        tipo = dados.get("tipo")
+        empresa = dados.get("empresa")
+        codRodada = dados.get("codrodada")
+        emailLider = dados.get("emailLider")
+
+        nome_arquivo = f"{email}_{tipo}.json"
+        caminho = f"{PASTA_RAIZ}/{empresa}/{codRodada}/{emailLider}/{nome_arquivo}"
+
+        payload = {"verificar": True, "caminho": caminho}
+        resposta = requests.post(GOOGLE_SCRIPT_URL, json=payload)
+
+        if resposta.status_code != 200:
+            raise Exception("Erro ao verificar envio.")
+
+        conteudo = resposta.json()
+        jaExiste = conteudo.get("existe", False)
+        return jsonify({"jaExiste": jaExiste})
+
+    except Exception as e:
+        print("❌ Erro no /verificar-envio:", str(e))
+        return jsonify({"erro": str(e)}), 500
+
+
+@app.route("/validar-acesso-formulario", methods=["POST"])
+def validar_acesso_formulario():
+    try:
+        dados = request.get_json()
+        email = dados.get("email")
+        tipo = dados.get("tipo")
+        empresa = dados.get("empresa")
+        codRodada = dados.get("codrodada")
+        emailLider = dados.get("emailLider")
+
+        if not all([email, tipo, empresa, codRodada, emailLider]):
+            raise Exception("Dados incompletos para validação.")
+
+        nome_arquivo = f"{email}_{tipo}.json"
+        caminho = f"{PASTA_RAIZ}/{empresa}/{codRodada}/{emailLider}/{nome_arquivo}"
+
+        payload = {"verificar": True, "caminho": caminho}
+        resposta = requests.post(GOOGLE_SCRIPT_URL, json=payload)
+        existe = resposta.json().get("existe", False)
+
+        return jsonify({"acessoLiberado": not existe})
+
+    except Exception as e:
+        print("❌ Erro no /validar-acesso-formulario:", str(e))
+        return jsonify({"erro": str(e)}), 500
+
