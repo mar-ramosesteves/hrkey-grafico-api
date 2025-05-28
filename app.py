@@ -299,6 +299,13 @@ def enviar_avaliacao():
         }
 
         resposta = requests.post(GOOGLE_SCRIPT_URL, json=payload)
+
+        print("📤 Payload enviado ao Google Script:")
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+
+        print("📥 Resposta recebida do Google Script:")
+        print(resposta.text)
+
         if resposta.status_code != 200:
             raise Exception(f"Erro ao enviar para o Drive: {resposta.text}")
 
@@ -307,6 +314,7 @@ def enviar_avaliacao():
     except Exception as e:
         print("❌ Erro no /enviar-avaliacao:", str(e))
         return jsonify({"erro": str(e)}), 500
+
 
 
 @app.route("/verificar-envio", methods=["POST"])
