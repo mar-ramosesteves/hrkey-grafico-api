@@ -518,6 +518,8 @@ def aplicar_cors(response):
 @app.route("/gerar-relatorio-json", methods=["POST"])
 def gerar_relatorio_json():
     try:
+        print("📩 request.data:", request.data)
+
         dados = request.get_json(force=True)  # força leitura segura do JSON
         empresa = dados.get("empresa")
         codrodada = dados.get("codrodada")
