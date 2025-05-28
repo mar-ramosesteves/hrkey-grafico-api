@@ -529,7 +529,8 @@ def gerar_relatorio_json():
             return jsonify({"erro": "Faltam parâmetros obrigatórios."}), 400
 
         # 🔹 Baixa os arquivos JSON da pasta do líder
-        caminho_local = baixar_pasta_do_drive(empresa, codrodada, emailLider)
+        caminho_local = f"/mnt/data/Avaliacoes RH/{empresa}/{codrodada}/{emailLider}"
+
         if not os.path.exists(caminho_local):
             return jsonify({"erro": f"Pasta '{caminho_local}' não encontrada no servidor."}), 400
 
