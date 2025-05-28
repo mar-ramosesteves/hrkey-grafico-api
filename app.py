@@ -518,7 +518,7 @@ def aplicar_cors(response):
 @app.route("/gerar-relatorio-json", methods=["POST"])
 def gerar_relatorio_json():
     try:
-        dados = request.get_json()
+        dados = request.get_json(force=True)  # força leitura segura do JSON
         empresa = dados.get("empresa")
         codrodada = dados.get("codrodada")
         emailLider = dados.get("emailLider")
@@ -528,6 +528,8 @@ def gerar_relatorio_json():
 
         # 🔹 Baixa os arquivos JSON da pasta do líder
         caminho_local = baixar_pasta_do_drive(empresa, codrodada, emailLider)
+        if not os.path.exists(caminho_local):
+            return jsonify({"erro": f"Pasta '{caminho_local}' não encontrada no servidor."}), 400
 
         # 🔹 Lê os arquivos JSON
         jsons_auto = []
@@ -536,11 +538,15 @@ def gerar_relatorio_json():
         for nome in os.listdir(caminho_local):
             if nome.endswith(".json"):
                 with open(os.path.join(caminho_local, nome), "r", encoding="utf-8") as f:
-                    conteudo = json.load(f)
-                    if conteudo.get("tipo") == "Autoavaliação":
-                        jsons_auto.append(conteudo)
-                    elif conteudo.get("tipo") == "Avaliação Equipe":
-                        jsons_equipe.append(conteudo)
+                    try:
+                        conteudo = json.load(f)
+                        tipo = conteudo.get("tipo", "").lower()
+                        if "auto" in tipo:
+                            jsons_auto.append(conteudo)
+                        elif "equipe" in tipo:
+                            jsons_equipe.append(conteudo)
+                    except Exception as e:
+                        print(f"⚠️ Erro ao ler {nome}: {e}")
 
         if not jsons_auto:
             return jsonify({"erro": "Nenhuma autoavaliação encontrada."}), 400
@@ -552,9 +558,13 @@ def gerar_relatorio_json():
         quantidade_respostas = {}
 
         for avaliacao in jsons_equipe:
-            for q, valor in avaliacao["respostas"].items():
-                total_respostas[q] = total_respostas.get(q, 0) + float(valor)
-                quantidade_respostas[q] = quantidade_respostas.get(q, 0) + 1
+            for q, valor in avaliacao.get("respostas", {}).items():
+                try:
+                    valor_float = float(valor)
+                    total_respostas[q] = total_respostas.get(q, 0) + valor_float
+                    quantidade_respostas[q] = quantidade_respostas.get(q, 0) + 1
+                except ValueError:
+                    print(f"⚠️ Valor inválido em {q}: {valor}")
 
         medias_equipe = {
             q: round(total_respostas[q] / quantidade_respostas[q], 2)
@@ -566,7 +576,7 @@ def gerar_relatorio_json():
             "empresa": empresa,
             "codrodada": codrodada,
             "emailLider": emailLider,
-            "autoavaliacao": jsons_auto[0]["respostas"],
+            "autoavaliacao": jsons_auto[0].get("respostas", {}),
             "mediaEquipe": medias_equipe,
             "qtdAvaliacoesEquipe": len(jsons_equipe)
         }
@@ -584,4 +594,3 @@ def gerar_relatorio_json():
 
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
-
