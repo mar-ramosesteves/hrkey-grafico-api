@@ -442,7 +442,7 @@ def enviar_avaliacao():
 
         resposta = requests.post( 
 
-    'https://script.google.com/macros/s/AKfycbw5AjoO_3WODqq5pLGDXAHxcC5UjoSoWN8_I_qW3PvL1DUqKBS4yiy_R2XCN7gq-Ozzcg/exec', 
+    'https://script.google.com/macros/s/AKfycbzrKBSwgRf9ckJrBDRkC1VsDibhYrWTJkLPhVMt83x_yCXnd_ex_CYuehT8pioTFvbxsw/exec', 
 
     json=dados, 
 
