@@ -265,7 +265,7 @@ def grafico_equipe():
 import requests
 import os
 
-GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw5AjoO_3WODqq5pLGDXAHxcC5UjoSoWN8_I_qW3PvL1DUqKBS4yiy_R2XCN7gq-Ozzcg/exec"
+GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzrKBSwgRf9ckJrBDRkC1VsDibhYrWTJkLPhVMt83x_yCXnd_ex_CYuehT8pioTFvbxsw/exec"
 PASTA_RAIZ = "Avaliacoes RH"
 
 @app.route("/enviar-avaliacao", methods=["POST"])
