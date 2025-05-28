@@ -277,7 +277,7 @@ def verificar_envio():
 
         nome_arquivo = f"{emailRespondente}_{tipo}.json"
         caminho = f"Avaliacoes RH/{empresa}/{codrodada}/{emailLider}/{nome_arquivo}"
-        full_path = os.path.join("/mnt/data", caminho)
+        full_path = os.path.join("/tmp", caminho)
 
         if os.path.exists(full_path):
             return jsonify({"status": "existe"})
@@ -303,7 +303,7 @@ def validar_acesso_formulario():
 
         nome_arquivo = f"{email}_{tipo}.json"
         caminho = f"Avaliacoes RH/{empresa}/{codrodada}/{emailLider}/{nome_arquivo}"
-        full_path = os.path.join("/mnt/data", caminho)
+        full_path = os.path.join("/tmp", caminho)
 
         if os.path.exists(full_path):
             return jsonify({"status": "bloqueado"})
@@ -366,7 +366,7 @@ def gerar_tabela_comparativa(json_auto, jsons_equipe, empresa, codrodada, emailL
 import requests
 
 def baixar_pasta_do_drive(empresa, codrodada, emailLider):
-    caminho_local = f"/mnt/data/Avaliacoes RH/{empresa}/{codrodada}/{emailLider}"
+    caminho_local = f"/tmp/Avaliacoes RH/{empresa}/{codrodada}/{emailLider}"
     os.makedirs(caminho_local, exist_ok=True)
 
     payload = {
