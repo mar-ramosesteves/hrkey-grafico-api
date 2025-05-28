@@ -592,3 +592,12 @@ def gerar_relatorio_json():
 
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
+
+
+@app.after_request
+def aplicar_cors(response):
+    response.headers["Access-Control-Allow-Origin"] = "https://gestor.thehrkey.tech"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
+
