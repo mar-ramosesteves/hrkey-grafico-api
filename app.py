@@ -430,67 +430,60 @@ import requests
 
  
 
-@app.route('/enviar-avaliacao', methods=['POST']) 
+@app.route('/enviar-avaliacao', methods=['POST'])
+def enviar_avaliacao():
+    try:
+        import datetime
+        from supabase import create_client
 
-def enviar_avaliacao(): 
+        # ✅ 1. Coleta os dados do POST
+        dados = request.get_json()
 
-    try: 
+        # ✅ 2. Extrai campos principais
+        empresa = dados.get("empresa", "").strip().upper()
+        codrodada = dados.get("codrodada", "").strip().upper()
+        emailLider = dados.get("emailLider", "").strip().lower()
+        tipo = dados.get("tipo", "").strip()
 
-        dados = request.get_json() 
+        # ✅ 3. Cria estrutura do registro
+        registro = {
+            "empresa": empresa,
+            "codrodada": codrodada,
+            "emailLider": emailLider,
+            "tipo": tipo,
+            "nome": dados.get("nome", "").strip(),
+            "email": dados.get("email", "").strip().lower(),
+            "nomeLider": dados.get("nomeLider", "").strip(),
+            "departamento": dados.get("departamento", "").strip(),
+            "estado": dados.get("estado", "").strip(),
+            "nascimento": dados.get("nascimento", "").strip(),
+            "sexo": dados.get("sexo", "").strip().lower(),
+            "etnia": dados.get("etnia", "").strip().lower(),
+            "data": dados.get("data", "").strip(),
+            "cargo": dados.get("cargo", "").strip(),
+            "area": dados.get("area", "").strip(),
+            "cidade": dados.get("cidade", "").strip(),
+            "pais": dados.get("pais", "").strip(),
+            "data_criacao": datetime.datetime.now().isoformat(),
+            "dados_json": dados
+        }
 
- 
+        # ✅ 4. Conecta no Supabase
+        url = os.environ.get("SUPABASE_URL")
+        key = os.environ.get("SUPABASE_KEY")
+        supabase = create_client(url, key)
 
-        resposta = requests.post( 
+        # ✅ 5. Insere na tabela correta
+        resultado = supabase.table("relatorios_arquetipos").insert(registro).execute()
 
-    'https://script.google.com/macros/s/AKfycbzovjlx3NNGR6cdbbDWY_lTsMHmHzqZ80KxVjur1bm-7UcG3EP--PRL-B209jYMIQ6C7w/exec', 
+        if resultado.get("status_code") in [200, 201]:
+            return jsonify({"mensagem": "✅ Avaliação registrada com sucesso."}), 200
+        else:
+            return jsonify({"erro": resultado}), 500
 
-    json=dados, 
-
-    timeout=10 
-
-) 
-
- 
-
- 
-
-        texto = resposta.text.strip() 
-
- 
-
-        if "já enviou" in texto: 
-
-            return jsonify({ 
-
-                'status': 'duplicado', 
-
-                'mensagem': texto 
-
-            }), 409 
-
- 
-
-        return jsonify({ 
-
-            'status': 'ok', 
-
-            'mensagem': texto 
-
-        }), 200 
-
- 
-
-    except Exception as e: 
-
-        print("❌ Erro ao enviar para Google Script:", str(e)) 
-
-        return jsonify({ 
-
-            'status': 'erro', 
-
-            'mensagem': str(e) 
-
-        }), 500 
+    except Exception as e:
+        print("❌ Erro ao registrar no Supabase:", str(e))
+        return jsonify({"erro": str(e)}), 500
 
  
 
