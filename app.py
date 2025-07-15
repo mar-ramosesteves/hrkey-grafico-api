@@ -463,60 +463,33 @@ def enviar_avaliacao():
 
  
 
-@app.route('/enviar-avaliacao-arquetipos', methods=['POST'])
+@app.route("/enviar-avaliacao-arquetipos", methods=["POST", "OPTIONS"])
 def enviar_avaliacao_arquetipos():
-    import requests
+    if request.method == "OPTIONS":
+        return '', 200
+
     import datetime
-    import os
-    from flask import request, jsonify
+    import requests
+
+    dados = request.get_json()
+    if not dados:
+        return jsonify({"erro": "Nenhum dado recebido"}), 400
+
+    print("✅ Dados recebidos:", dados)
 
     try:
-        dados = request.get_json()
-
-        empresa = dados.get("empresa", "").strip()
-        codrodada = dados.get("codrodada", "").strip()
+        # Campos obrigatórios mínimos
+        empresa = dados.get("empresa", "").strip().lower()
+        codrodada = dados.get("codrodada", "").strip().lower()
         emailLider = dados.get("emailLider", "").strip().lower()
-        nome = dados.get("nome", "").strip()
-        email = dados.get("email", "").strip().lower()
-        nomeLider = dados.get("nomeLider", "").strip()
-        estado = dados.get("estado", "").strip()
-        nascimento = dados.get("nascimento", "").strip()
-        sexo = dados.get("sexo", "").strip().lower()
-        etnia = dados.get("etnia", "").strip().lower()
-        departamento = dados.get("departamento", "").strip()
-        tipo = dados.get("tipo", "").strip()
-        data = dados.get("data", "").strip()
-        cargo = dados.get("cargo", "").strip()
-        area = dados.get("area", "").strip()
-        cidade = dados.get("cidade", "").strip()
-        pais = dados.get("pais", "").strip()
+        tipo = dados.get("tipo", "").strip().lower()
 
-        registro = {
-            "empresa": empresa,
-            "codrodada": codrodada,
-            "emailLider": emailLider,
-            "tipo": tipo,
-            "nome": nome,
-            "email": email,
-            "nomeLider": nomeLider,
-            "departamento": departamento,
-            "estado": estado,
-            "nascimento": nascimento,
-            "sexo": sexo,
-            "etnia": etnia,
-            "data": data,
-            "cargo": cargo,
-            "area": area,
-            "cidade": cidade,
-            "pais": pais,
-            "data_criacao": datetime.datetime.now().isoformat(),
-            "dados_json": dados  # todos os dados, inclusive respostas Q01 a Q49
-        }
+        if not all([empresa, codrodada, emailLider, tipo]):
+            return jsonify({"erro": "Campos obrigatórios ausentes."}), 400
 
-        print("📦 Enviando dados para Supabase...")
-        print(json.dumps(registro, indent=2, ensure_ascii=False))
+        # URL da tabela de arquétipos
+        url_supabase = "https://xmsjjknpnowsswwrbvpc.supabase.co/rest/v1/relatorios_arquetipos"
 
-        url_supabase = os.environ.get("SUPABASE_URL") + "/rest/v1/relatorios_arquetipos"
         headers = {
             "apikey": os.environ.get("SUPABASE_KEY"),
             "Authorization": f"Bearer {os.environ.get('SUPABASE_KEY')}",
@@ -524,16 +497,47 @@ def enviar_avaliacao_arquetipos():
             "Prefer": "return=representation"
         }
 
-        resposta = requests.post(url_supabase, headers=headers, json=registro)
-        print("📩 Resposta Supabase:", resposta.text)
+        # Registro formatado
+        registro = {
+            "empresa": empresa,
+            "codrodada": codrodada,
+            "emailLider": emailLider,
+            "tipo": tipo,
+            "nome": dados.get("nome", "").strip(),
+            "email": dados.get("email", "").strip().lower(),
+            "nomeLider": dados.get("nomeLider", "").strip(),
+            "departamento": dados.get("departamento", "").strip(),
+            "estado": dados.get("estado", "").strip(),
+            "nascimento": dados.get("nascimento", "").strip(),
+            "sexo": dados.get("sexo", "").strip().lower(),
+            "etnia": dados.get("etnia", "").strip().lower(),
+            "data": dados.get("data", "").strip(),
+            "cargo": dados.get("cargo", "").strip(),
+            "area": dados.get("area", "").strip(),
+            "cidade": dados.get("cidade", "").strip(),
+            "pais": dados.get("pais", "").strip(),
+            "data_criacao": datetime.datetime.now().isoformat(),
+            "dados_json": dados
+        }
 
-        if resposta.status_code in [200, 201]:
-            return jsonify({"mensagem": "Avaliação salva com sucesso!"}), 200
+        print("📦 Registro sendo enviado ao Supabase:")
+        print(json.dumps(registro, indent=2, ensure_ascii=False))
+
+        resposta = requests.post(url_supabase, headers=headers, json=registro)
+
+        if resposta.status_code == 201:
+            print("✅ Avaliação de arquétipos salva no Supabase com sucesso!")
+            return jsonify({"status": "✅ Arquétipos → salvo no banco de dados"}), 200
         else:
+            print("❌ Erro Supabase:", resposta.status_code)
+            try:
+                print("❌ Corpo da resposta:", resposta.json())
+            except:
+                print("❌ Corpo da resposta (raw):", resposta.text)
             return jsonify({"erro": resposta.text}), 500
 
     except Exception as e:
-        print("❌ Erro ao enviar avaliação para Supabase:", str(e))
+        print("❌ Erro ao processar dados:", str(e))
         return jsonify({"erro": str(e)}), 500
 
  
