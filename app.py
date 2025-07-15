@@ -428,6 +428,38 @@ def grafico_equipe():
 
 import requests 
 
+
+@app.route('/enviar-avaliacao', methods=['POST'])
+def enviar_avaliacao():
+    try:
+        dados = request.get_json()
+
+        resposta = requests.post(
+            'https://script.google.com/macros/s/AKfycbzovjlx3NNGR6cdbbDWY_lTsMHmHzqZ80KxVjur1bm-7UcG3EP--PRL-B209jYMIQ6C7w/exec',
+            json=dados,
+            timeout=10
+        )
+
+        texto = resposta.text.strip()
+
+        if "já enviou" in texto:
+            return jsonify({
+                'status': 'duplicado',
+                'mensagem': texto
+            }), 409
+
+        return jsonify({
+            'status': 'ok',
+            'mensagem': texto
+        }), 200
+
+    except Exception as e:
+        print("❌ Erro ao enviar para Google Script:", str(e))
+        return jsonify({
+            'status': 'erro',
+            'mensagem': str(e)
+        }), 500
+
  
 
 @app.route('/enviar-avaliacao-arquetipos', methods=['POST'])
