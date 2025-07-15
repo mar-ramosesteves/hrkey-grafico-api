@@ -17,7 +17,7 @@ import os
  
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": ["https://gestor.thehrkey.tech"]}})
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
 
 
  
