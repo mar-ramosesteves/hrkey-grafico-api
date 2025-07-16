@@ -711,7 +711,7 @@ def salvar_consolidado_arquetipos():
             "codrodada": codrodada,
             "emaillider": emailLider,
             "dados_json": consolidado,
-            "criado_em": datetime.utcnow().isoformat()
+            "data_criacao": datetime.utcnow().isoformat()
         }
 
         url_final = f"{supabase_url}/consolidado_arquetipos"
