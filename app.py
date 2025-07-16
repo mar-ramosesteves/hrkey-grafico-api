@@ -656,6 +656,10 @@ def salvar_consolidado_arquetipos():
 
     try:
         dados = request.get_json()
+
+        if not isinstance(dados, dict):
+            return jsonify({"erro": "Formato JSON inválido. Esperado um objeto com empresa, codrodada e emailLider."}), 400
+        
         empresa = dados.get("empresa", "").strip().lower()
         codrodada = dados.get("codrodada", "").strip().lower()
         emailLider = dados.get("emailLider", "").strip().lower()
