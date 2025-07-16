@@ -669,10 +669,13 @@ def salvar_consolidado_arquetipos():
 
         if not all([empresa, codrodada, emailLider]):
             return jsonify({"erro": "Campos obrigatórios ausentes."}), 400
+         
+        print("🔁 Iniciando chamada ao Supabase com os dados validados...")
 
        
 
-        
+        print("🔑 API KEY:", os.getenv("SUPABASE_KEY"))
+
         url_base = "https://xmsjjknpnowsswwrbvpc.supabase.co"
         api_key = os.getenv("SUPABASE_KEY")
         headers = {
