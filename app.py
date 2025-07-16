@@ -673,15 +673,16 @@ def salvar_consolidado_arquetipos():
         }
 
         # 🔍 Buscar autoavaliação
-        filtro_auto = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=eq.Autoavaliação"
+        filtro_auto = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=ilike.autoavaliação"
+
         url_auto = f"{supabase_url}/relatorios_arquetipos{filtro_auto}"
         resp_auto = requests.get(url_auto, headers=headers)
         auto_data = resp_auto.json()
         print("📥 Resultado da requisição AUTO:", auto_data)
 
         if not auto_data:
-            print("❌ Autoavaliação não encontrada.")
-            return jsonify({"erro": "Autoavaliação não encontrada."}), 404
+            print("❌ autoavaliação não encontrada.")
+            return jsonify({"erro": "autoavaliação não encontrada."}), 404
 
         autoavaliacao = auto_data[0]["dados_json"]
 
