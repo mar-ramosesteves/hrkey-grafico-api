@@ -653,11 +653,14 @@ def validar_acesso_formulario():
 def salvar_consolidado_arquetipos():
     if request.method == "GET":
         return jsonify({
-            "mensagem": "✅ API online. Para funcionar, envie via POST os campos: empresa, codrodada e emailLider."
+            "mensagem": "✅ API online. Para funcionar, envie dados via POST com empresa, codrodada e emailLider."
         })
 
     try:
-        # 📥 Captura os dados do corpo da requisição
+        import requests
+        from datetime import datetime
+        import os
+
         dados = request.get_json()
         empresa = dados.get("empresa", "").strip().lower()
         codrodada = dados.get("codrodada", "").strip().lower()
@@ -666,12 +669,10 @@ def salvar_consolidado_arquetipos():
         if not all([empresa, codrodada, emailLider]):
             return jsonify({"erro": "Campos obrigatórios ausentes."}), 400
 
-        print(f"✅ Dados recebidos: {empresa} {codrodada} {emailLider}")
+        print("✅ Dados recebidos:", empresa, codrodada, emailLider)
         print("🔁 Iniciando chamada ao Supabase com os dados validados...")
 
-        # 🔑 Configurações Supabase (com variáveis MAIÚSCULAS)
-        import requests
-        supabase_url = os.environ.get("SUPABASE_URL")
+        supabase_url = os.environ.get("SUPABASE_REST_URL")
         supabase_key = os.environ.get("SUPABASE_KEY")
 
         headers = {
@@ -680,68 +681,57 @@ def salvar_consolidado_arquetipos():
             "Content-Type": "application/json"
         }
 
-        # 📤 Requisição da autoavaliação
-        filtro_auto = f"?empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=eq.autoavaliacao"
+        # 🔎 Buscar AUTOAVALIAÇÃO
+        filtro_auto = f"?empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=eq.Autoavaliação"
         url_auto = f"{supabase_url}/relatorios_arquetipos{filtro_auto}"
         resp_auto = requests.get(url_auto, headers=headers)
         auto_data = resp_auto.json()
         print("📥 Resultado da requisição AUTO:", auto_data)
 
-        if not auto_data or "dados_json" not in auto_data[0]:
+        if not auto_data:
             print("❌ Autoavaliação não encontrada.")
             return jsonify({"erro": "Autoavaliação não encontrada."}), 404
 
         autoavaliacao = auto_data[0]["dados_json"]
 
-        # 📤 Requisição das avaliações de equipe
-        filtro_eqp = f"?empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=eq.equipe"
-        url_eqp = f"{supabase_url}/relatorios_arquetipos{filtro_eqp}"
-        resp_eqp = requests.get(url_eqp, headers=headers)
-        equipe_data = resp_eqp.json()
+        # 🔎 Buscar AVALIAÇÕES DE EQUIPE
+        filtro_equipe = f"?empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=eq.Equipe"
+        url_equipe = f"{supabase_url}/relatorios_arquetipos{filtro_equipe}"
+        resp_equipe = requests.get(url_equipe, headers=headers)
+        equipe_data = resp_equipe.json()
         print("📥 Resultado da requisição EQUIPE:", equipe_data)
 
-        avaliacoesEquipe = [item["dados_json"] for item in equipe_data if "dados_json" in item]
+        if not equipe_data:
+            print("❌ Nenhuma avaliação da equipe encontrada.")
+            return jsonify({"erro": "Nenhuma avaliação da equipe encontrada."}), 404
 
-        # ✅ JSON consolidado final
-        from datetime import datetime
-        datahora = datetime.now().strftime("%Y%m%d_%H%M%S")
-        nome_arquivo = f"relatorio_consolidado_{emailLider}_{empresa}_{codrodada}_{datahora}.json"
+        avaliacoesEquipe = [av["dados_json"] for av in equipe_data]
 
-        consolidado = {
+        # 📦 Consolidar os dados em um único dicionário
+        json_final = {
             "empresa": empresa,
             "codrodada": codrodada,
             "emailLider": emailLider,
+            "criado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "autoavaliacao": autoavaliacao,
             "avaliacoesEquipe": avaliacoesEquipe
         }
 
-        # 💾 Salvar consolidado
-        salvar_url = f"{supabase_url}/consolidado_arquetipos"
-        payload = {
-            "empresa": empresa,
-            "codrodada": codrodada,
-            "emailLider": emailLider,
-            "dados_json": consolidado,
-            "criado_em": datetime.utcnow().isoformat()
-        }
-
-        resp_salvar = requests.post(salvar_url, headers=headers, json=payload)
-        print("📤 Resposta do salvamento:", resp_salvar.text)
+        # 💾 Salvar na tabela consolidado_arquetipos
+        url_salvar = f"{supabase_url}/consolidado_arquetipos"
+        resp_salvar = requests.post(url_salvar, headers=headers, json=json_final)
 
         if resp_salvar.status_code in [200, 201]:
-            return jsonify({
-                "mensagem": "✅ Consolidado salvo com sucesso.",
-                "nome_arquivo": nome_arquivo
-            })
+            print("✅ JSON consolidado salvo com sucesso.")
+            return jsonify({"mensagem": "JSON consolidado salvo com sucesso."})
         else:
-            return jsonify({
-                "erro": "Erro ao salvar consolidado.",
-                "detalhes": resp_salvar.text
-            }), 500
+            print("❌ Erro ao salvar consolidado:", resp_salvar.text)
+            return jsonify({"erro": "Erro ao salvar consolidado.", "detalhes": resp_salvar.text}), 500
 
     except Exception as e:
         print("ERRO DETALHADO:", str(e))
         return jsonify({"erro": str(e)}), 500
+
 
 
 
