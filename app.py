@@ -666,7 +666,7 @@ def salvar_consolidado_arquetipos():
             return jsonify({"erro": "Campos obrigatórios ausentes."}), 400
 
         url_base = "https://xmsjjknpnowsswwrbvpc.supabase.co"
-        api_key = os.getenv("SUPABASE_API_KEY")
+        api_key = os.getenv("SUPABASE_KEY")
         headers = {
             "apikey": api_key,
             "Authorization": f"Bearer {api_key}"
