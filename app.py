@@ -17,7 +17,11 @@ import os
  
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["https://gestor.thehrkey.tech"]}})
+CORS(app,
+     origins=["https://gestor.thehrkey.tech"],
+     supports_credentials=True,
+     methods=["GET", "POST", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization"])
 
 
 
@@ -645,7 +649,8 @@ def validar_acesso_formulario():
         return jsonify({"status": "erro", "mensagem": str(e)}), 500 
 
 
-@app.route("/salvar-consolidado-arquetipos", methods=["POST"])
+@app.route("/salvar-consolidado-arquetipos", methods=["POST", "OPTIONS"])
+
 def salvar_consolidado_arquetipos():
     try:
         import requests
