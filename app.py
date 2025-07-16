@@ -655,17 +655,22 @@ def salvar_consolidado_arquetipos():
         return jsonify({"mensagem": "✅ API online. Para funcionar, envie dados via POST com empresa, codrodada e emailLider."})
 
     try:
-        dados = request.get_json()
+        dados = request.get_json(force=True, silent=True)
 
         if not isinstance(dados, dict):
-            return jsonify({"erro": "Formato JSON inválido. Esperado um objeto com empresa, codrodada e emailLider."}), 400
-        
+            print("❌ JSON inválido ou ausente:", dados)
+            return jsonify({"erro": "JSON inválido ou ausente. Envie um objeto com empresa, codrodada e emailLider."}), 400
+
         empresa = dados.get("empresa", "").strip().lower()
         codrodada = dados.get("codrodada", "").strip().lower()
         emailLider = dados.get("emailLider", "").strip().lower()
 
+        print("✅ Dados recebidos:", empresa, codrodada, emailLider)
+
         if not all([empresa, codrodada, emailLider]):
             return jsonify({"erro": "Campos obrigatórios ausentes."}), 400
+
+       
 
         
         url_base = "https://xmsjjknpnowsswwrbvpc.supabase.co"
