@@ -693,11 +693,14 @@ def salvar_consolidado_arquetipos():
 
         try:
             auto_data = resp_auto.json()
+            print("📥 Resultado da requisição AUTO:", auto_data)
+
         except Exception as e:
             print("ERRO AO LER JSON DA AUTOAVALIAÇÃO:", resp_auto.text)
             raise e
 
         if not auto_data:
+        print("❌ Autoavaliação vazia.")
             return jsonify({"erro": "Autoavaliação não encontrada."}), 404
         autoavaliacao = auto_data[0]["dados_json"]
 
@@ -714,7 +717,10 @@ def salvar_consolidado_arquetipos():
         except Exception as e:
             print("ERRO AO LER JSON DA EQUIPE:", resp_equipe.text)
             raise e
-         
+
+     
+        print("📥 Resultado da requisição EQUIPE:", equipe_data)
+ 
         avaliacoesEquipe = [item["dados_json"] for item in equipe_data]
 
         consolidado = {
