@@ -649,32 +649,21 @@ def validar_acesso_formulario():
         return jsonify({"status": "erro", "mensagem": str(e)}), 500 
 
 
-app.route("/salvar-consolidado-arquetipos", methods=["POST", "OPTIONS"])
+@app.route("/salvar-consolidado-arquetipos", methods=["GET", "POST"])
 def salvar_consolidado_arquetipos():
-    if request.method == "OPTIONS":
-        print("Requisição OPTIONS recebida — CORS liberado.")
-        return '', 200
-
-    print("Recebido POST para salvar-consolidado-arquetipos")  # <--- debug inicial
+    if request.method == "GET":
+        return jsonify({"mensagem": "✅ API online. Para funcionar, envie dados via POST com empresa, codrodada e emailLider."})
 
     try:
-        import requests
-
         dados = request.get_json()
-        print("JSON recebido:", dados)  # <--- debug conteúdo recebido
-
         empresa = dados.get("empresa", "").strip().lower()
         codrodada = dados.get("codrodada", "").strip().lower()
         emailLider = dados.get("emailLider", "").strip().lower()
 
-        print("Empresa:", empresa)
-        print("Rodada:", codrodada)
-        print("Líder:", emailLider)
-
         if not all([empresa, codrodada, emailLider]):
-            print("❗ Campos obrigatórios ausentes")
             return jsonify({"erro": "Campos obrigatórios ausentes."}), 400
 
+        
         url_base = "https://xmsjjknpnowsswwrbvpc.supabase.co"
         api_key = os.getenv("SUPABASE_KEY")
         headers = {
