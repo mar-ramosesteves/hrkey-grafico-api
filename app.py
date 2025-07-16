@@ -652,7 +652,7 @@ def validar_acesso_formulario():
 @app.route("/salvar-consolidado-arquetipos", methods=["GET", "POST"])
 def salvar_consolidado_arquetipos():
     if request.method == "GET":
-        return jsonify({"mensagem": "✅ API online. Envie dados via POST com empresa, codrodada e emailLider."})
+        return jsonify({"mensagem": "✅ API online. Envie POST com empresa, codrodada, emailLider para salvar consolidado."})
 
     try:
         dados = request.get_json()
@@ -666,63 +666,60 @@ def salvar_consolidado_arquetipos():
         print(f"✅ Dados recebidos: {empresa} {codrodada} {emailLider}")
         print("🔁 Iniciando chamada ao Supabase com os dados validados...")
 
-        # 🔧 Configuração do Supabase
-        SUPABASE_URL = "https://xmsjjknpnowsswwrbvpc.supabase.co"
-        SUPABASE_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhtc2pqa25wbm93c3N3d3JidnBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1MDg0NDUsImV4cCI6MjA2ODA4NDQ0NX0.OexXJX7lK_DefGb72VDWGLDcUXamoQIgYOv5Zo_e9L4"
+        # ▶️ 1. Buscar todos os registros da tabela relatorios_arquetipos
+        url_busca = f"{SUPABASE_URL}/rest/v1/relatorios_arquetipos?empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}"
         headers = {
             "apikey": SUPABASE_API_KEY,
             "Authorization": f"Bearer {SUPABASE_API_KEY}",
             "Content-Type": "application/json"
         }
+        resp = requests.get(url_busca, headers=headers)
+        registros = resp.json()
+        print("📊 Registros encontrados:", len(registros))
 
-        # 📥 Buscar autoavaliação
-        url_auto = f"{SUPABASE_URL}/rest/v1/avaliacoes_arquetipos?empresa=eq.{empresa}&codrodada=eq.{codrodada}&email=eq.{emailLider}&tipo=eq.autoavaliacao"
-        resp_auto = requests.get(url_auto, headers=headers)
-        auto_data = resp_auto.json()
-        print("📥 Resultado da requisição AUTO:", auto_data)
+        if not registros:
+            return jsonify({"erro": "Nenhuma avaliação encontrada para esse líder."}), 404
 
-        if not auto_data:
-            print("❌ Autoavaliação vazia.")
+        # ▶️ 2. Separar autoavaliação e equipe
+        autoavaliacao = None
+        avaliacoesEquipe = []
+
+        for r in registros:
+            if r.get("tipo", "").lower() == "autoavaliacao":
+                autoavaliacao = r
+            else:
+                avaliacoesEquipe.append(r)
+
+        if not autoavaliacao:
             return jsonify({"erro": "Autoavaliação não encontrada."}), 404
+        if not avaliacoesEquipe:
+            return jsonify({"erro": "Nenhuma avaliação de equipe encontrada."}), 404
 
-        autoavaliacao = auto_data[0]["dados_json"]
-
-        # 📥 Buscar avaliações de equipe
-        url_equipe = f"{SUPABASE_URL}/rest/v1/avaliacoes_arquetipos?empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=eq.equipe"
-        resp_equipe = requests.get(url_equipe, headers=headers)
-        equipe_data = resp_equipe.json()
-        print(f"📥 {len(equipe_data)} avaliações da equipe recebidas.")
-
-        avaliacoesEquipe = [d["dados_json"] for d in equipe_data]
-
-        # 📦 Consolidar JSON
+        # ▶️ 3. Gerar JSON consolidado no mesmo formato do gráfico
         consolidado = {
-            "empresa": empresa,
-            "codrodada": codrodada,
-            "emailLider": emailLider,
             "autoavaliacao": autoavaliacao,
             "avaliacoesEquipe": avaliacoesEquipe
         }
 
-        # 📤 Salvar na tabela relatorios_arquetipos
-        url_save = f"{SUPABASE_URL}/rest/v1/relatorios_arquetipos"
+        # ▶️ 4. Salvar na tabela consolidado_arquetipos
         payload = {
             "empresa": empresa,
             "codrodada": codrodada,
-            "emaillider": emailLider,
+            "emailLider": emailLider,
             "dados_json": consolidado
         }
 
-        resp_salvar = requests.post(url_save, headers=headers, data=json.dumps(payload))
-        print("💾 RESPOSTA DO SALVAMENTO:", resp_salvar.status_code, resp_salvar.text)
+        url_insere = f"{SUPABASE_URL}/rest/v1/consolidado_arquetipos"
+        resp_insere = requests.post(url_insere, headers=headers, json=payload)
+        print("📤 Resposta Supabase:", resp_insere.text)
 
-        if resp_salvar.status_code in [200, 201]:
+        if resp_insere.status_code in [200, 201]:
             return jsonify({"mensagem": "✅ JSON consolidado salvo com sucesso."})
         else:
-            return jsonify({"erro": "Erro ao salvar consolidado.", "detalhes": resp_salvar.text}), 500
+            return jsonify({"erro": "Erro ao salvar consolidado.", "detalhes": resp_insere.text}), 500
 
     except Exception as e:
-        print("ERRO DETALHADO:", str(e))
+        print("❌ ERRO DETALHADO:", str(e))
         return jsonify({"erro": str(e)}), 500
 
 
