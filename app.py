@@ -649,27 +649,18 @@ def validar_acesso_formulario():
         return jsonify({"status": "erro", "mensagem": str(e)}), 500 
 
 
-@app.route("/salvar-consolidado-arquetipos", methods=["GET", "POST"])
+@app.route("/salvar-consolidado-arquetipos", methods=["POST"])
 def salvar_consolidado_arquetipos():
-    if request.method == "GET":
-        return jsonify({
-            "mensagem": "✅ API online. Para funcionar, envie dados via POST com empresa, codrodada e emailLider."
-        })
-
     try:
         import requests
         from datetime import datetime
-        import os
 
         dados = request.get_json()
         empresa = dados.get("empresa", "").strip().lower()
         codrodada = dados.get("codrodada", "").strip().lower()
         emailLider = dados.get("emailLider", "").strip().lower()
 
-        if not all([empresa, codrodada, emailLider]):
-            return jsonify({"erro": "Campos obrigatórios ausentes."}), 400
-
-        print("✅ Dados recebidos:", empresa, codrodada, emailLider)
+        print(f"✅ Dados recebidos: {empresa} {codrodada} {emailLider}")
         print("🔁 Iniciando chamada ao Supabase com os dados validados...")
 
         supabase_url = os.environ.get("SUPABASE_REST_URL")
@@ -681,29 +672,12 @@ def salvar_consolidado_arquetipos():
             "Content-Type": "application/json"
         }
 
-        # 🔎 Buscar AUTOAVALIAÇÃO
-        filtro_auto = f"?empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=eq.Autoavaliação"
-        # 🔁 Buscar todos os registros do líder (auto + equipe)
-        url_auto = f"{SUPABASE_REST_URL}/relatorios_arquetipos?empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}"
+        # 🔍 Buscar autoavaliação
+        filtro_auto = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=eq.Autoavaliação"
+        url_auto = f"{supabase_url}/relatorios_arquetipos{filtro_auto}"
         resp_auto = requests.get(url_auto, headers=headers)
-        
-        try:
-            todos_dados = resp_auto.json()
-            print("📥 Resultado da requisição AUTO:", todos_dados)
-        
-            # ✅ Filtrar autoavaliação com segurança
-            auto_data = [item for item in todos_dados if item.get("tipo", "").strip().lower() == "autoavaliação"]
-        
-            if not auto_data:
-                print("❌ Autoavaliação não encontrada.")
-                return jsonify({"erro": "Autoavaliação não encontrada."}), 404
-        
-            autoavaliacao = auto_data[0]["dados_json"]
-        
-        except Exception as e:
-            print("ERRO AO LER JSON DA AUTOAVALIAÇÃO:", resp_auto.text)
-            return jsonify({"erro": "Erro ao processar autoavaliação."}), 500
-
+        auto_data = resp_auto.json()
+        print("📥 Resultado da requisição AUTO:", auto_data)
 
         if not auto_data:
             print("❌ Autoavaliação não encontrada.")
@@ -711,42 +685,46 @@ def salvar_consolidado_arquetipos():
 
         autoavaliacao = auto_data[0]["dados_json"]
 
-        # 🔎 Buscar AVALIAÇÕES DE EQUIPE
-        filtro_equipe = f"?empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=eq.Equipe"
+        # 🔍 Buscar avaliações de equipe (pode ser 1 ou 1000)
+        filtro_equipe = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=eq.avaliação equipe"
         url_equipe = f"{supabase_url}/relatorios_arquetipos{filtro_equipe}"
         resp_equipe = requests.get(url_equipe, headers=headers)
         equipe_data = resp_equipe.json()
         print("📥 Resultado da requisição EQUIPE:", equipe_data)
 
-        if not equipe_data:
-            print("❌ Nenhuma avaliação da equipe encontrada.")
-            return jsonify({"erro": "Nenhuma avaliação da equipe encontrada."}), 404
+        avaliacoes_equipe = [r["dados_json"] for r in equipe_data if "dados_json" in r]
 
-        avaliacoesEquipe = [av["dados_json"] for av in equipe_data]
+        if not avaliacoes_equipe:
+            print("❌ Nenhuma avaliação de equipe encontrada.")
+            return jsonify({"erro": "Nenhuma avaliação de equipe encontrada."}), 404
 
-        # 📦 Consolidar os dados em um único dicionário
-        json_final = {
-            "empresa": empresa,
-            "codrodada": codrodada,
-            "emailLider": emailLider,
-            "criado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        # 🧩 Montar JSON final
+        consolidado = {
             "autoavaliacao": autoavaliacao,
-            "avaliacoesEquipe": avaliacoesEquipe
+            "avaliacoesEquipe": avaliacoes_equipe
         }
 
-        # 💾 Salvar na tabela consolidado_arquetipos
-        url_salvar = f"{supabase_url}/consolidado_arquetipos"
-        resp_salvar = requests.post(url_salvar, headers=headers, json=json_final)
+        # 💾 Salvar na tabela final
+        payload = {
+            "empresa": empresa,
+            "codrodada": codrodada,
+            "emaillider": emailLider,
+            "dados_json": consolidado,
+            "criado_em": datetime.utcnow().isoformat()
+        }
 
-        if resp_salvar.status_code in [200, 201]:
-            print("✅ JSON consolidado salvo com sucesso.")
-            return jsonify({"mensagem": "JSON consolidado salvo com sucesso."})
-        else:
-            print("❌ Erro ao salvar consolidado:", resp_salvar.text)
-            return jsonify({"erro": "Erro ao salvar consolidado.", "detalhes": resp_salvar.text}), 500
+        url_final = f"{supabase_url}/consolidado_arquetipos"
+        resp_final = requests.post(url_final, headers=headers, json=payload)
+
+        if resp_final.status_code not in [200, 201]:
+            print("❌ Erro ao salvar no Supabase:", resp_final.text)
+            return jsonify({"erro": "Erro ao salvar consolidado."}), 500
+
+        print("✅ Consolidado salvo com sucesso.")
+        return jsonify({"mensagem": "Consolidado salvo com sucesso."})
 
     except Exception as e:
-        print("ERRO DETALHADO:", str(e))
+        print("💥 ERRO GERAL:", str(e))
         return jsonify({"erro": str(e)}), 500
 
 
