@@ -700,7 +700,7 @@ def salvar_consolidado_arquetipos():
             raise e
 
         if not auto_data:
-        print("❌ Autoavaliação vazia.")
+            print("❌ Autoavaliação vazia.")
             return jsonify({"erro": "Autoavaliação não encontrada."}), 404
         autoavaliacao = auto_data[0]["dados_json"]
 
