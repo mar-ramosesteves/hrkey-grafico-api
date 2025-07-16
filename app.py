@@ -650,12 +650,13 @@ def validar_acesso_formulario():
 
 
 @app.route("/salvar-consolidado-arquetipos", methods=["POST", "OPTIONS"])
-
 def salvar_consolidado_arquetipos():
+    if request.method == "OPTIONS":
+        return '', 200  # Responde explicitamente ao preflight CORS
+
     try:
         import requests
 
-        # Recebe dados da requisição
         dados = request.get_json()
         empresa = dados.get("empresa", "").strip().lower()
         codrodada = dados.get("codrodada", "").strip().lower()
@@ -664,7 +665,6 @@ def salvar_consolidado_arquetipos():
         if not all([empresa, codrodada, emailLider]):
             return jsonify({"erro": "Campos obrigatórios ausentes."}), 400
 
-        # Configurações Supabase
         url_base = "https://xmsjjknpnowsswwrbvpc.supabase.co"
         api_key = os.getenv("SUPABASE_API_KEY")
         headers = {
@@ -672,14 +672,11 @@ def salvar_consolidado_arquetipos():
             "Authorization": f"Bearer {api_key}"
         }
 
-        # === BUSCAR AUTOAVALIAÇÃO ===
+        # Autoavaliação
         url_auto = (
             f"{url_base}/rest/v1/avaliacoes"
-            f"?empresa=eq.{empresa}"
-            f"&codrodada=eq.{codrodada}"
-            f"&emailLider=eq.{emailLider}"
-            f"&dados_json->>tipo=eq.Autoavaliação"
-            f"&select=dados_json"
+            f"?empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}"
+            f"&dados_json->>tipo=eq.Autoavaliação&select=dados_json"
         )
         resp_auto = requests.get(url_auto, headers=headers)
         auto_data = resp_auto.json()
@@ -687,20 +684,16 @@ def salvar_consolidado_arquetipos():
             return jsonify({"erro": "Autoavaliação não encontrada."}), 404
         autoavaliacao = auto_data[0]["dados_json"]
 
-        # === BUSCAR AVALIAÇÕES DE EQUIPE ===
+        # Equipe
         url_equipe = (
             f"{url_base}/rest/v1/avaliacoes"
-            f"?empresa=eq.{empresa}"
-            f"&codrodada=eq.{codrodada}"
-            f"&emailLider=eq.{emailLider}"
-            f"&dados_json->>tipo=eq.Avaliação%20Equipe"
-            f"&select=dados_json"
+            f"?empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}"
+            f"&dados_json->>tipo=eq.Avaliação%20Equipe&select=dados_json"
         )
         resp_equipe = requests.get(url_equipe, headers=headers)
         equipe_data = resp_equipe.json()
         avaliacoesEquipe = [item["dados_json"] for item in equipe_data]
 
-        # === MONTAR CONSOLIDADO ===
         consolidado = {
             "empresa": empresa,
             "codrodada": codrodada,
@@ -711,7 +704,6 @@ def salvar_consolidado_arquetipos():
 
         nome_arquivo = f"relatorio_consolidado_arquetipos_{emailLider}_{codrodada}.json"
 
-        # === SALVAR NA TABELA consolidado_arquetipos ===
         salvar_url = f"{url_base}/rest/v1/consolidado_arquetipos"
         payload = {
             "empresa": empresa,
@@ -720,6 +712,7 @@ def salvar_consolidado_arquetipos():
             "dados_json": consolidado,
             "nome_arquivo": nome_arquivo
         }
+
         headers_post = headers.copy()
         headers_post["Content-Type"] = "application/json"
 
@@ -732,6 +725,7 @@ def salvar_consolidado_arquetipos():
 
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
+
 
 
 
