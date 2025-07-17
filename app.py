@@ -649,8 +649,8 @@ def validar_acesso_formulario():
         return jsonify({"status": "erro", "mensagem": str(e)}), 500 
 
 
-@app.route("/salvar-consolidado-microambiente", methods=["POST"])
-def salvar_consolidado_microambiente():
+@app.route("/salvar-consolidado-arquetipos", methods=["POST"])
+def salvar_consolidado_arquetipos():
     try:
         import requests
         from datetime import datetime
@@ -673,21 +673,22 @@ def salvar_consolidado_microambiente():
         }
 
         # 🔍 Buscar autoavaliação
-        filtro_auto = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=ilike.microambiente_autoavaliacao"
-        url_auto = f"{supabase_url}/relatorios_microambiente{filtro_auto}"
+        filtro_auto = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=ilike.autoavaliação"
+
+        url_auto = f"{supabase_url}/relatorios_arquetipos{filtro_auto}"
         resp_auto = requests.get(url_auto, headers=headers)
         auto_data = resp_auto.json()
         print("📥 Resultado da requisição AUTO:", auto_data)
 
         if not auto_data:
-            print("❌ microambiente_autoavaliacao não encontrada.")
-            return jsonify({"erro": "microambiente_autoavaliacao não encontrada."}), 404
+            print("❌ autoavaliação não encontrada.")
+            return jsonify({"erro": "autoavaliação não encontrada."}), 404
 
         autoavaliacao = auto_data[0]["dados_json"]
 
-        # 🔍 Buscar avaliações de equipe
-        filtro_equipe = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=eq.microambiente_equipe"
-        url_equipe = f"{supabase_url}/relatorios_microambiente{filtro_equipe}"
+        # 🔍 Buscar avaliações de equipe (pode ser 1 ou 1000)
+        filtro_equipe = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=eq.avaliação equipe"
+        url_equipe = f"{supabase_url}/relatorios_arquetipos{filtro_equipe}"
         resp_equipe = requests.get(url_equipe, headers=headers)
         equipe_data = resp_equipe.json()
         print("📥 Resultado da requisição EQUIPE:", equipe_data)
@@ -714,7 +715,7 @@ def salvar_consolidado_microambiente():
             "nome_arquivo": f"consolidado_{empresa}_{codrodada}_{emailLider}.json".lower()
         }
 
-        url_final = f"{supabase_url}/consolidado_microambiente"
+        url_final = f"{supabase_url}/consolidado_arquetipos"
         resp_final = requests.post(url_final, headers=headers, json=payload)
 
         if resp_final.status_code not in [200, 201]:
