@@ -486,10 +486,35 @@ def enviar_avaliacao_arquetipos():
         empresa = dados.get("empresa", "").strip().lower()
         codrodada = dados.get("codrodada", "").strip().lower()
         emailLider = dados.get("emailLider", "").strip().lower()
-        tipo = dados.get("tipo", "").strip().lower()
+        tipo = dados.get("tipo", "").strip()
 
         if not all([empresa, codrodada, emailLider, tipo]):
             return jsonify({"erro": "Campos obrigatórios ausentes."}), 400
+
+        # Separar apenas respostas Q01–Q49
+        respostas = {k: v for k, v in dados.items() if k.upper().startswith("Q")}
+
+        # Montar dados_json no formato do Google Drive
+        dados_json_formatado = {
+            "empresa": empresa,
+            "codrodada": codrodada,
+            "emailLider": emailLider,
+            "respostas": respostas,
+            "nome": dados.get("nome", "").strip(),
+            "email": dados.get("email", "").strip().lower(),
+            "nomeLider": dados.get("nomeLider", "").strip(),
+            "estado": dados.get("estado", "").strip(),
+            "nascimento": dados.get("nascimento", "").strip(),
+            "sexo": dados.get("sexo", "").strip().lower(),
+            "etnia": dados.get("etnia", "").strip().lower(),
+            "departamento": dados.get("departamento", "").strip(),
+            "tipo": tipo,
+            "data": dados.get("data", "").strip(),
+            "cargo": dados.get("cargo", "").strip(),
+            "area": dados.get("area", "").strip(),
+            "cidade": dados.get("cidade", "").strip(),
+            "pais": dados.get("pais", "").strip()
+        }
 
         # URL da tabela de arquétipos
         url_supabase = "https://xmsjjknpnowsswwrbvpc.supabase.co/rest/v1/relatorios_arquetipos"
@@ -501,7 +526,6 @@ def enviar_avaliacao_arquetipos():
             "Prefer": "return=representation"
         }
 
-        # Registro formatado
         registro = {
             "empresa": empresa,
             "codrodada": codrodada,
@@ -521,7 +545,7 @@ def enviar_avaliacao_arquetipos():
             "cidade": dados.get("cidade", "").strip(),
             "pais": dados.get("pais", "").strip(),
             "data_criacao": datetime.datetime.now().isoformat(),
-            "dados_json": dados
+            "dados_json": dados_json_formatado
         }
 
         print("📦 Registro sendo enviado ao Supabase:")
