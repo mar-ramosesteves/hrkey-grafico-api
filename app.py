@@ -697,7 +697,7 @@ def salvar_consolidado_arquetipos():
         }
 
         # 🔍 Buscar autoavaliação
-        filtro_auto = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=ilike.autoavaliação"
+        filtro_auto = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=ilike.Autoavaliação"
 
         url_auto = f"{supabase_url}/relatorios_arquetipos{filtro_auto}"
         resp_auto = requests.get(url_auto, headers=headers)
@@ -711,7 +711,7 @@ def salvar_consolidado_arquetipos():
         autoavaliacao = auto_data[0]["dados_json"]
 
         # 🔍 Buscar avaliações de equipe (pode ser 1 ou 1000)
-        filtro_equipe = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=eq.avaliação equipe"
+        filtro_equipe = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=ilike.Avaliação%20Equipe"
         url_equipe = f"{supabase_url}/relatorios_arquetipos{filtro_equipe}"
         resp_equipe = requests.get(url_equipe, headers=headers)
         equipe_data = resp_equipe.json()
