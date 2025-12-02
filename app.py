@@ -17,11 +17,16 @@ import os
  
 
 app = Flask(__name__)
-CORS(app,
-     origins=["https://gestor.thehrkey.tech"],
-     supports_credentials=True,
-     methods=["GET", "POST", "OPTIONS"],
-     allow_headers=["Content-Type", "Authorization"])
+
+# CORS global
+CORS(app, resources={r"/*": {"origins": "https://gestor.thehrkey.tech"}}, supports_credentials=True)
+
+@app.after_request
+def aplicar_cors(response):
+    response.headers["Access-Control-Allow-Origin"] = "https://gestor.thehrkey.tech"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    return response
 
 
 
@@ -673,9 +678,16 @@ def validar_acesso_formulario():
         return jsonify({"status": "erro", "mensagem": str(e)}), 500 
 
 
-@app.route("/salvar-consolidado-arquetipos", methods=["POST"])
+@app.route("/salvar-consolidado-arquetipos", methods=["POST", "OPTIONS"])
 def salvar_consolidado_arquetipos():
+    if request.method == "OPTIONS":
+        # Resposta rápida só para o preflight CORS
+        return '', 204
+
     try:
+
+
+     
         import requests
         from datetime import datetime
 
