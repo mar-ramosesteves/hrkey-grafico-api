@@ -28,6 +28,33 @@ def aplicar_cors(response):
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
     return response
 
+def buscar_primeira_resposta_arquetipos(url_supabase, headers, empresa, codrodada, email_lider, tipo, email):
+    params = {
+        "select": "id,data_criacao",
+        "empresa": f"eq.{empresa}",
+        "codrodada": f"eq.{codrodada}",
+        "emailLider": f"eq.{email_lider}",
+        "tipo": f"ilike.{tipo}",
+        "email": f"eq.{email}",
+        "order": "data_criacao.asc",
+        "limit": "1"
+    }
+    resposta = requests.get(url_supabase, headers=headers, params=params, timeout=30)
+    if resposta.status_code != 200:
+        print("Erro ao verificar duplicidade no Supabase:", resposta.status_code, resposta.text)
+        return None
+    dados = resposta.json()
+    return dados[0] if dados else None
+
+def primeiras_respostas_arquetipos_por_email(registros):
+    primeiras = {}
+    for registro in sorted(registros, key=lambda r: r.get("data_criacao") or ""):
+        dados_json = registro.get("dados_json") or {}
+        email = (dados_json.get("email") or registro.get("email") or "").strip().lower()
+        if email and email not in primeiras:
+            primeiras[email] = dados_json
+    return list(primeiras.values())
+
 
 
  
@@ -492,8 +519,9 @@ def enviar_avaliacao_arquetipos():
         codrodada = dados.get("codrodada", "").strip().lower()
         emailLider = dados.get("emailLider", "").strip().lower()
         tipo = dados.get("tipo", "").strip()
+        email = dados.get("email", "").strip().lower()
 
-        if not all([empresa, codrodada, emailLider, tipo]):
+        if not all([empresa, codrodada, emailLider, tipo, email]):
             return jsonify({"erro": "Campos obrigatórios ausentes."}), 400
 
         # Separar apenas respostas Q01–Q49
@@ -506,7 +534,7 @@ def enviar_avaliacao_arquetipos():
             "emailLider": emailLider,
             "respostas": respostas,
             "nome": dados.get("nome", "").strip(),
-            "email": dados.get("email", "").strip().lower(),
+            "email": email,
             "nomeLider": dados.get("nomeLider", "").strip(),
             "estado": dados.get("estado", "").strip(),
             "nascimento": dados.get("nascimento", "").strip(),
@@ -530,6 +558,23 @@ def enviar_avaliacao_arquetipos():
             "Content-Type": "application/json",
             "Prefer": "return=representation"
         }
+
+        resposta_existente = buscar_primeira_resposta_arquetipos(
+            url_supabase,
+            headers,
+            empresa,
+            codrodada,
+            emailLider,
+            tipo,
+            email
+        )
+
+        if resposta_existente:
+            return jsonify({
+                "erro": "inventario_ja_respondido",
+                "mensagem": "Este inventario ja foi respondido anteriormente.",
+                "data_criacao": resposta_existente.get("data_criacao")
+            }), 409
 
         registro = {
             "empresa": empresa,
@@ -576,6 +621,54 @@ def enviar_avaliacao_arquetipos():
  
 
  
+
+@app.route("/verificar-avaliacao-arquetipos", methods=["POST", "OPTIONS"])
+def verificar_avaliacao_arquetipos():
+    if request.method == "OPTIONS":
+        return '', 200
+
+    dados = request.get_json() or {}
+    empresa = dados.get("empresa", "").strip().lower()
+    codrodada = dados.get("codrodada", "").strip().lower()
+    emailLider = dados.get("emailLider", "").strip().lower()
+    tipo = dados.get("tipo", "").strip()
+    email = dados.get("email", "").strip().lower()
+
+    if not all([empresa, codrodada, emailLider, tipo, email]):
+        return jsonify({"erro": "Campos obrigatorios ausentes."}), 400
+
+    supabase_url = os.environ.get("SUPABASE_REST_URL")
+    supabase_key = os.environ.get("SUPABASE_KEY")
+
+    if not supabase_url or not supabase_key:
+        return jsonify({"erro": "Supabase nao configurado."}), 500
+
+    url_supabase = f"{supabase_url}/relatorios_arquetipos"
+    headers = {
+        "apikey": supabase_key,
+        "Authorization": f"Bearer {supabase_key}",
+        "Content-Type": "application/json"
+    }
+
+    resposta_existente = buscar_primeira_resposta_arquetipos(
+        url_supabase,
+        headers,
+        empresa,
+        codrodada,
+        emailLider,
+        tipo,
+        email
+    )
+
+    if resposta_existente:
+        return jsonify({
+            "respondido": True,
+            "mensagem": "Este inventario ja foi respondido anteriormente.",
+            "data_criacao": resposta_existente.get("data_criacao")
+        }), 200
+
+    return jsonify({"respondido": False}), 200
+
 
 @app.route('/verificar-envio', methods=['POST']) 
 
@@ -711,6 +804,7 @@ def salvar_consolidado_arquetipos():
         # 🔍 Buscar autoavaliação
         filtro_auto = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=ilike.Autoavaliação"
 
+        filtro_auto += "&order=data_criacao.asc&limit=1"
         url_auto = f"{supabase_url}/relatorios_arquetipos{filtro_auto}"
         resp_auto = requests.get(url_auto, headers=headers)
         auto_data = resp_auto.json()
@@ -724,12 +818,13 @@ def salvar_consolidado_arquetipos():
 
         # 🔍 Buscar avaliações de equipe (pode ser 1 ou 1000)
         filtro_equipe = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=ilike.Avaliação%20Equipe"
+        filtro_equipe += "&order=data_criacao.asc"
         url_equipe = f"{supabase_url}/relatorios_arquetipos{filtro_equipe}"
         resp_equipe = requests.get(url_equipe, headers=headers)
         equipe_data = resp_equipe.json()
         print("📥 Resultado da requisição EQUIPE:", equipe_data)
 
-        avaliacoes_equipe = [r["dados_json"] for r in equipe_data if "dados_json" in r]
+        avaliacoes_equipe = primeiras_respostas_arquetipos_por_email(equipe_data)
 
         if not avaliacoes_equipe:
             print("❌ Nenhuma avaliação de equipe encontrada.")
