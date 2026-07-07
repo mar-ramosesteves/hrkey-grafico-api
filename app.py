@@ -28,23 +28,33 @@ def aplicar_cors(response):
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
     return response
 
+def familia_tipo_arquetipos(tipo):
+    tipo_normalizado = (tipo or "").strip().lower()
+    if "auto" in tipo_normalizado:
+        return "auto"
+    if "equipe" in tipo_normalizado:
+        return "equipe"
+    return tipo_normalizado
+
 def buscar_primeira_resposta_arquetipos(url_supabase, headers, empresa, codrodada, email_lider, tipo, email):
     params = {
-        "select": "id,data_criacao",
+        "select": "id,data_criacao,tipo",
         "empresa": f"eq.{empresa}",
         "codrodada": f"eq.{codrodada}",
         "emailLider": f"eq.{email_lider}",
-        "tipo": f"ilike.{tipo}",
         "email": f"eq.{email}",
         "order": "data_criacao.asc",
-        "limit": "1"
     }
     resposta = requests.get(url_supabase, headers=headers, params=params, timeout=30)
     if resposta.status_code != 200:
         print("Erro ao verificar duplicidade no Supabase:", resposta.status_code, resposta.text)
         return None
     dados = resposta.json()
-    return dados[0] if dados else None
+    familia_alvo = familia_tipo_arquetipos(tipo)
+    for registro in dados:
+        if familia_tipo_arquetipos(registro.get("tipo")) == familia_alvo:
+            return registro
+    return None
 
 def primeiras_respostas_arquetipos_por_email(registros):
     primeiras = {}
