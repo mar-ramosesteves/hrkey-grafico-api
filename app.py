@@ -886,7 +886,8 @@ def salvar_consolidado_arquetipos():
 
      
 
-        if resp_final.status_code not in [200, 201]:
+        if resp_final.status_code not in [200, 201, 204]:
+         
             print("❌ Erro ao salvar no Supabase:", resp_final.text)
             return jsonify({"erro": "Erro ao salvar consolidado."}), 500
 
