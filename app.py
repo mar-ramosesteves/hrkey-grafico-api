@@ -811,39 +811,39 @@ def salvar_consolidado_arquetipos():
             "Content-Type": "application/json"
         }
 
-        # ðŸ” Buscar autoavaliaÃ§Ã£o
-        url_auto = f"{supabase_url}/relatorios_arquetipos"
-        resp_auto = requests.get(url_auto, headers=headers, params={
-            "select": "dados_json",
+        # Buscar respostas do lÃ­der sem depender de acento/codificaÃ§Ã£o do campo tipo.
+        url_respostas = f"{supabase_url}/relatorios_arquetipos"
+        resp_respostas = requests.get(url_respostas, headers=headers, params={
+            "select": "dados_json,tipo,email,data_criacao",
             "empresa": f"eq.{empresa}",
             "codrodada": f"eq.{codrodada}",
             "emailLider": f"eq.{emailLider}",
-            "tipo": "ilike.AutoavaliaÃ§Ã£o",
             "order": "data_criacao.asc",
-            "limit": "1",
-        })
-        auto_data = resp_auto.json()
-        print("ðŸ“¥ Resultado da requisiÃ§Ã£o AUTO:", auto_data)
+            "limit": "10000",
+        }, timeout=30)
+
+        if resp_respostas.status_code != 200:
+            print("Erro ao consultar respostas de arquetipos:", resp_respostas.status_code, resp_respostas.text)
+            return jsonify({"erro": "Erro ao consultar respostas de arquetipos.", "detalhe": resp_respostas.text}), 500
+
+        respostas_data = resp_respostas.json() or []
+        print("Resultado da requisiÃ§Ã£o ARQUETIPOS:", respostas_data)
+
+        auto_data = [
+            row for row in respostas_data
+            if familia_tipo_arquetipos(row.get("tipo")) == "auto"
+        ]
 
         if not auto_data:
-            print("âŒ autoavaliaÃ§Ã£o nÃ£o encontrada.")
-            return jsonify({"erro": "autoavaliaÃ§Ã£o nÃ£o encontrada."}), 404
+            print("autoavaliacao nao encontrada.")
+            return jsonify({"erro": "autoavaliacao nao encontrada."}), 404
 
         autoavaliacao = auto_data[0]["dados_json"]
 
-        # ðŸ” Buscar avaliaÃ§Ãµes de equipe (pode ser 1 ou 1000)
-        url_equipe = f"{supabase_url}/relatorios_arquetipos"
-        resp_equipe = requests.get(url_equipe, headers=headers, params={
-            "select": "dados_json",
-            "empresa": f"eq.{empresa}",
-            "codrodada": f"eq.{codrodada}",
-            "emailLider": f"eq.{emailLider}",
-            "tipo": "ilike.AvaliaÃ§Ã£o Equipe",
-            "order": "data_criacao.asc",
-        })
-        equipe_data = resp_equipe.json()
-        print("ðŸ“¥ Resultado da requisiÃ§Ã£o EQUIPE:", equipe_data)
-
+        equipe_data = [
+            row for row in respostas_data
+            if familia_tipo_arquetipos(row.get("tipo")) == "equipe"
+        ]
         avaliacoes_equipe = primeiras_respostas_arquetipos_por_email(equipe_data)
 
         if not avaliacoes_equipe:
