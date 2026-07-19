@@ -71,7 +71,7 @@ def primeiras_respostas_arquetipos_por_email(registros):
 
  
 
-# Carrega a matriz de cálculo com a coluna CHAVE 
+# Carrega a matriz de cÃ¡lculo com a coluna CHAVE 
 
 matriz = pd.read_excel("TABELA_GERAL_ARQUETIPOS_COM_CHAVE.xlsx") 
 
@@ -99,7 +99,7 @@ def gerar_grafico():
 
             except json.JSONDecodeError: 
 
-                raise Exception("Formato de JSON em 'entries' inválido.") 
+                raise Exception("Formato de JSON em 'entries' invÃ¡lido.") 
 
  
 
@@ -107,7 +107,7 @@ def gerar_grafico():
 
             raise Exception("Nenhum dado recebido.") 
 
-        print("📦 Dados recebidos (após unpack):", dados) 
+        print("ðŸ“¦ Dados recebidos (apÃ³s unpack):", dados) 
 
  
 
@@ -159,7 +159,7 @@ def gerar_grafico():
 
         if not linhas: 
 
-            raise Exception("Nenhuma resposta válida encontrada para gerar o gráfico.") 
+            raise Exception("Nenhuma resposta vÃ¡lida encontrada para gerar o grÃ¡fico.") 
 
  
 
@@ -183,7 +183,7 @@ def gerar_grafico():
 
  
 
-        # Gráfico atualizado 
+        # GrÃ¡fico atualizado 
 
         fig, ax = plt.subplots(figsize=(10, 6)) 
 
@@ -207,9 +207,9 @@ def gerar_grafico():
 
         ax.set_ylim(0, 100) 
 
-        ax.set_ylabel('Pontuação (%)') 
+        ax.set_ylabel('PontuaÃ§Ã£o (%)') 
 
-        ax.set_title(f"AUTOAVALIAÇÃO - ARQUÉTIPOS DE LIDERANÇA\nRespondente: {email_lider} | Data: {data_envio}", fontsize=13) 
+        ax.set_title(f"AUTOAVALIAÃ‡ÃƒO - ARQUÃ‰TIPOS DE LIDERANÃ‡A\nRespondente: {email_lider} | Data: {data_envio}", fontsize=13) 
 
         ax.legend() 
 
@@ -235,7 +235,7 @@ def gerar_grafico():
 
     except Exception as e: 
 
-        print("❌ Erro:", str(e)) 
+        print("âŒ Erro:", str(e)) 
 
         return jsonify({"erro": str(e)}), 500 
 
@@ -245,7 +245,7 @@ def gerar_grafico():
 
 def home(): 
 
-    return "🎯 API de Gráficos de Arquétipos está ativa!" 
+    return "ðŸŽ¯ API de GrÃ¡ficos de ArquÃ©tipos estÃ¡ ativa!" 
 
  
 
@@ -267,13 +267,13 @@ def relatorio_detalhado():
 
  
 
-        # Carrega a matriz principal (com tendência) 
+        # Carrega a matriz principal (com tendÃªncia) 
 
         matriz = pd.read_excel("TABELA_GERAL_ARQUETIPOS_COM_CHAVE.xlsx") 
 
  
 
-        # Carrega as frases corretas da autoavaliação 
+        # Carrega as frases corretas da autoavaliaÃ§Ã£o 
 
         frases_auto = pd.read_excel("QUESTOES_AUTO_AVALIACAO.xlsx") 
 
@@ -311,17 +311,17 @@ def relatorio_detalhado():
 
  
 
-            top2 = matches.sort_values(by="% Tendência", ascending=False).head(2) 
+            top2 = matches.sort_values(by="% TendÃªncia", ascending=False).head(2) 
 
             arqs = top2["ARQUETIPO"].tolist() 
 
-            tendencia = top2["Tendência"].values[0] 
+            tendencia = top2["TendÃªncia"].values[0] 
 
-            percentual = top2["% Tendência"].values[0] 
+            percentual = top2["% TendÃªncia"].values[0] 
 
  
 
-            frase = frases_dict.get(cod, cod)  # Busca no dicionário correto 
+            frase = frases_dict.get(cod, cod)  # Busca no dicionÃ¡rio correto 
 
  
 
@@ -347,7 +347,7 @@ def relatorio_detalhado():
 
     except Exception as e: 
 
-        print("❌ Erro no /relatorio:", str(e)) 
+        print("âŒ Erro no /relatorio:", str(e)) 
 
         return jsonify({"erro": str(e)}), 500 
 
@@ -375,7 +375,7 @@ def grafico_equipe():
 
  
 
-    # Filtrar pelas entradas do líder e data 
+    # Filtrar pelas entradas do lÃ­der e data 
 
     df_filtrado = df[(df['emailLider'] == email) & (df['data'] == data)] 
 
@@ -383,7 +383,7 @@ def grafico_equipe():
 
     if df_filtrado.empty: 
 
-        return jsonify({'erro': 'Nenhuma avaliação encontrada para esse líder e data.'}), 404 
+        return jsonify({'erro': 'Nenhuma avaliaÃ§Ã£o encontrada para esse lÃ­der e data.'}), 404 
 
  
 
@@ -415,7 +415,7 @@ def grafico_equipe():
 
         else: 
 
-            peso = 0  # segurança 
+            peso = 0  # seguranÃ§a 
 
  
 
@@ -433,7 +433,7 @@ def grafico_equipe():
 
  
 
-        # Gerar gráfico 
+        # Gerar grÃ¡fico 
 
         fig, ax = plt.subplots(figsize=(6, 1.2)) 
 
@@ -465,7 +465,7 @@ def grafico_equipe():
 
  
 
-    return jsonify({'mensagem': 'Gráficos gerados com sucesso!', 'total': len(resultados)}) 
+    return jsonify({'mensagem': 'GrÃ¡ficos gerados com sucesso!', 'total': len(resultados)}) 
 
  
 
@@ -489,7 +489,7 @@ def enviar_avaliacao():
 
         texto = resposta.text.strip()
 
-        if "já enviou" in texto:
+        if "jÃ¡ enviou" in texto:
             return jsonify({
                 'status': 'duplicado',
                 'mensagem': texto
@@ -501,7 +501,7 @@ def enviar_avaliacao():
         }), 200
 
     except Exception as e:
-        print("❌ Erro ao enviar para Google Script:", str(e))
+        print("âŒ Erro ao enviar para Google Script:", str(e))
         return jsonify({
             'status': 'erro',
             'mensagem': str(e)
@@ -521,10 +521,10 @@ def enviar_avaliacao_arquetipos():
     if not dados:
         return jsonify({"erro": "Nenhum dado recebido"}), 400
 
-    print("✅ Dados recebidos:", dados)
+    print("âœ… Dados recebidos:", dados)
 
     try:
-        # Campos obrigatórios mínimos
+        # Campos obrigatÃ³rios mÃ­nimos
         empresa = dados.get("empresa", "").strip().lower()
         codrodada = dados.get("codrodada", "").strip().lower()
         emailLider = dados.get("emailLider", "").strip().lower()
@@ -532,9 +532,9 @@ def enviar_avaliacao_arquetipos():
         email = dados.get("email", "").strip().lower()
 
         if not all([empresa, codrodada, emailLider, tipo, email]):
-            return jsonify({"erro": "Campos obrigatórios ausentes."}), 400
+            return jsonify({"erro": "Campos obrigatÃ³rios ausentes."}), 400
 
-        # Separar apenas respostas Q01–Q49
+        # Separar apenas respostas Q01â€“Q49
         respostas = {k: v for k, v in dados.items() if k.upper().startswith("Q")}
 
         # Montar dados_json no formato do Google Drive
@@ -559,7 +559,7 @@ def enviar_avaliacao_arquetipos():
             "pais": dados.get("pais", "").strip()
         }
 
-        # URL da tabela de arquétipos
+        # URL da tabela de arquÃ©tipos
         url_supabase = "https://xmsjjknpnowsswwrbvpc.supabase.co/rest/v1/relatorios_arquetipos"
 
         headers = {
@@ -608,24 +608,24 @@ def enviar_avaliacao_arquetipos():
             "dados_json": dados_json_formatado
         }
 
-        print("📦 Registro sendo enviado ao Supabase:")
+        print("ðŸ“¦ Registro sendo enviado ao Supabase:")
         print(json.dumps(registro, indent=2, ensure_ascii=False))
 
         resposta = requests.post(url_supabase, headers=headers, json=registro)
 
         if resposta.status_code == 201:
-            print("✅ Avaliação de arquétipos salva no Supabase com sucesso!")
-            return jsonify({"status": "✅ Arquétipos → salvo no banco de dados"}), 200
+            print("âœ… AvaliaÃ§Ã£o de arquÃ©tipos salva no Supabase com sucesso!")
+            return jsonify({"status": "âœ… ArquÃ©tipos â†’ salvo no banco de dados"}), 200
         else:
-            print("❌ Erro Supabase:", resposta.status_code)
+            print("âŒ Erro Supabase:", resposta.status_code)
             try:
-                print("❌ Corpo da resposta:", resposta.json())
+                print("âŒ Corpo da resposta:", resposta.json())
             except:
-                print("❌ Corpo da resposta (raw):", resposta.text)
+                print("âŒ Corpo da resposta (raw):", resposta.text)
             return jsonify({"erro": resposta.text}), 500
 
     except Exception as e:
-        print("❌ Erro ao processar dados:", str(e))
+        print("âŒ Erro ao processar dados:", str(e))
         return jsonify({"erro": str(e)}), 500
 
  
@@ -702,7 +702,7 @@ def verificar_envio():
 
         if not all([empresa, codrodada, emailLider, emailRespondente]): 
 
-            return jsonify({"status": "erro", "mensagem": "Campos obrigatórios ausentes."}), 400 
+            return jsonify({"status": "erro", "mensagem": "Campos obrigatÃ³rios ausentes."}), 400 
 
  
 
@@ -754,7 +754,7 @@ def validar_acesso_formulario():
 
         if not all([empresa, codrodada, emailLider, email]): 
 
-            return jsonify({"status": "erro", "mensagem": "Campos obrigatórios ausentes."}), 400 
+            return jsonify({"status": "erro", "mensagem": "Campos obrigatÃ³rios ausentes."}), 400 
 
  
 
@@ -784,7 +784,7 @@ def validar_acesso_formulario():
 @app.route("/salvar-consolidado-arquetipos", methods=["POST", "OPTIONS"])
 def salvar_consolidado_arquetipos():
     if request.method == "OPTIONS":
-        # Resposta rápida só para o preflight CORS
+        # Resposta rÃ¡pida sÃ³ para o preflight CORS
         return '', 204
 
     try:
@@ -799,8 +799,8 @@ def salvar_consolidado_arquetipos():
         codrodada = dados.get("codrodada", "").strip().lower()
         emailLider = dados.get("emailLider", "").strip().lower()
 
-        print(f"✅ Dados recebidos: {empresa} {codrodada} {emailLider}")
-        print("🔁 Iniciando chamada ao Supabase com os dados validados...")
+        print(f"âœ… Dados recebidos: {empresa} {codrodada} {emailLider}")
+        print("ðŸ” Iniciando chamada ao Supabase com os dados validados...")
 
         supabase_url = os.environ.get("SUPABASE_REST_URL")
         supabase_key = os.environ.get("SUPABASE_KEY")
@@ -811,42 +811,52 @@ def salvar_consolidado_arquetipos():
             "Content-Type": "application/json"
         }
 
-        # 🔍 Buscar autoavaliação
-        filtro_auto = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=ilike.Autoavaliação"
-
-        filtro_auto += "&order=data_criacao.asc&limit=1"
-        url_auto = f"{supabase_url}/relatorios_arquetipos{filtro_auto}"
-        resp_auto = requests.get(url_auto, headers=headers)
+        # ðŸ” Buscar autoavaliaÃ§Ã£o
+        url_auto = f"{supabase_url}/relatorios_arquetipos"
+        resp_auto = requests.get(url_auto, headers=headers, params={
+            "select": "dados_json",
+            "empresa": f"eq.{empresa}",
+            "codrodada": f"eq.{codrodada}",
+            "emailLider": f"eq.{emailLider}",
+            "tipo": "ilike.AutoavaliaÃ§Ã£o",
+            "order": "data_criacao.asc",
+            "limit": "1",
+        })
         auto_data = resp_auto.json()
-        print("📥 Resultado da requisição AUTO:", auto_data)
+        print("ðŸ“¥ Resultado da requisiÃ§Ã£o AUTO:", auto_data)
 
         if not auto_data:
-            print("❌ autoavaliação não encontrada.")
-            return jsonify({"erro": "autoavaliação não encontrada."}), 404
+            print("âŒ autoavaliaÃ§Ã£o nÃ£o encontrada.")
+            return jsonify({"erro": "autoavaliaÃ§Ã£o nÃ£o encontrada."}), 404
 
         autoavaliacao = auto_data[0]["dados_json"]
 
-        # 🔍 Buscar avaliações de equipe (pode ser 1 ou 1000)
-        filtro_equipe = f"?select=dados_json&empresa=eq.{empresa}&codrodada=eq.{codrodada}&emailLider=eq.{emailLider}&tipo=ilike.Avaliação%20Equipe"
-        filtro_equipe += "&order=data_criacao.asc"
-        url_equipe = f"{supabase_url}/relatorios_arquetipos{filtro_equipe}"
-        resp_equipe = requests.get(url_equipe, headers=headers)
+        # ðŸ” Buscar avaliaÃ§Ãµes de equipe (pode ser 1 ou 1000)
+        url_equipe = f"{supabase_url}/relatorios_arquetipos"
+        resp_equipe = requests.get(url_equipe, headers=headers, params={
+            "select": "dados_json",
+            "empresa": f"eq.{empresa}",
+            "codrodada": f"eq.{codrodada}",
+            "emailLider": f"eq.{emailLider}",
+            "tipo": "ilike.AvaliaÃ§Ã£o Equipe",
+            "order": "data_criacao.asc",
+        })
         equipe_data = resp_equipe.json()
-        print("📥 Resultado da requisição EQUIPE:", equipe_data)
+        print("ðŸ“¥ Resultado da requisiÃ§Ã£o EQUIPE:", equipe_data)
 
         avaliacoes_equipe = primeiras_respostas_arquetipos_por_email(equipe_data)
 
         if not avaliacoes_equipe:
-            print("❌ Nenhuma avaliação de equipe encontrada.")
-            return jsonify({"erro": "Nenhuma avaliação de equipe encontrada."}), 404
+            print("âŒ Nenhuma avaliaÃ§Ã£o de equipe encontrada.")
+            return jsonify({"erro": "Nenhuma avaliaÃ§Ã£o de equipe encontrada."}), 404
 
-        # 🧩 Montar JSON final
+        # ðŸ§© Montar JSON final
         consolidado = {
             "autoavaliacao": autoavaliacao,
             "avaliacoesEquipe": avaliacoes_equipe
         }
 
-        # 💾 Salvar na tabela final
+        # ðŸ’¾ Salvar na tabela final
         payload = {
             "empresa": empresa,
             "codrodada": codrodada,
@@ -857,8 +867,6 @@ def salvar_consolidado_arquetipos():
         }
 
         url_final = f"{supabase_url}/consolidado_arquetipos"
-
-     
         filtro_existente = {
             "select": "id",
             "empresa": f"eq.{empresa}",
@@ -868,13 +876,13 @@ def salvar_consolidado_arquetipos():
             "limit": "1"
         }
         resp_existente = requests.get(url_final, headers=headers, params=filtro_existente, timeout=30)
-        
+
         if resp_existente.status_code != 200:
             print("Erro ao verificar consolidado existente:", resp_existente.text)
             return jsonify({"erro": "Erro ao verificar consolidado existente."}), 500
-        
+
         existentes = resp_existente.json() or []
-        
+
         if existentes:
             consolidado_id = existentes[0].get("id")
             url_update = f"{url_final}?id=eq.{consolidado_id}"
@@ -884,18 +892,15 @@ def salvar_consolidado_arquetipos():
             resp_final = requests.post(url_final, headers=headers, json=payload, timeout=30)
             acao = "criado"
 
-     
-
-        if resp_final.status_code not in [200, 201, 204]:
-         
-            print("❌ Erro ao salvar no Supabase:", resp_final.text)
+        if resp_final.status_code not in [200, 201]:
+            print("âŒ Erro ao salvar no Supabase:", resp_final.text)
             return jsonify({"erro": "Erro ao salvar consolidado."}), 500
 
-        print("✅ Consolidado salvo com sucesso.")
+        print("âœ… Consolidado salvo com sucesso.")
         return jsonify({"mensagem": "Consolidado salvo com sucesso."})
 
     except Exception as e:
-        print("💥 ERRO GERAL:", str(e))
+        print("ðŸ’¥ ERRO GERAL:", str(e))
         return jsonify({"erro": str(e)}), 500
 
 
